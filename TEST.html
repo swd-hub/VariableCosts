@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>CSV 金額自動計算</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; margin: 20px 0; width: 100%; }
+    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
+    input { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>CSV 金額計算ツール</h1>
+
+  <p>📄 基本データ（品名,容量,単位,予約価格）CSV:</p>
+  <input type="file" id="file1" accept=".csv" />
+  <div id="table1"></div>
+
+  <p>📄 使用量データ（品名,10a使用量,単位）CSV:</p>
+  <input type="file" id="file2" accept=".csv" />
+  <div id="table2"></div>
+
+  <script>
+    let priceData = {}; // 品名 → 単価（予約価格）
+
+    // CSVパース関数
+function parseCSV(content) {
+  return content
+    .trim()
+    .split('\n')
+    .map(row => row.split(',').map(cell => cell.trim()))
+    .map(row => {
+      // 末尾の空白列を削除
+      while (row[row.length - 1] === '') row.pop();
+      return row;
+    });
+}
+
+
+    // 表を作成して表示
+    function createTable(data) {
+      const table = document.createElement('table');
+      data.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement(index === 0 ? 'th' : 'td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+      return table;
+    }
+
+   // file1：予約価格データ読み込み
+document.getElementById('file1').addEventListener('change', function (e) {
+  const reader = new FileReader();
+  reader.onload = function () {
+    const rows = parseCSV(reader.result);
+    rows.slice(1).forEach(row => {
+      const name = row[0];
+      const volume = parseFloat(row[1]); // 容量
+      const price = parseFloat(row[3]);  // 予約価格
+      if (!isNaN(price) && !isNaN(volume)) {
+        priceData[name] = { price, volume }; // ←ここがポイント
+      }
+    });
+    const table = createTable(rows);
+    document.getElementById('table1').innerHTML = '';
+    document.getElementById('table1').appendChild(table);
+  };
+  reader.readAsText(e.target.files[0]);
+});
+
+
+    // file2：使用量データ読み込み＋金額計算
+    document.getElementById('file2').addEventListener('change', function (e) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        if (Object.keys(priceData).length === 0) {
+          alert("⚠️ 先に予約価格のCSV（file1）を読み込んでください！");
+          return;
+        }
+
+        const rows = parseCSV(reader.result);
+        const header = rows[0].concat('金額（円）');
+
+        const body = rows.slice(1).map(row => {
+          const name = row[0];
+          const usage = parseFloat(row[1]);
+const itemInfo = priceData[name];
+if (itemInfo && !isNaN(usage)) {
+  const unitPrice = itemInfo.price / itemInfo.volume; // 単価
+  const cost = usage * unitPrice;
+  return row.concat(Math.round(cost));
+} else {
+  return row.concat('該当なし');
+}
+
+
+          return row.concat(typeof cost === 'number' ? Math.round(cost) : cost);
+        });
+
+        const table = createTable([header, ...body]);
+        document.getElementById('table2').innerHTML = '';
+        document.getElementById('table2').appendChild(table);
+      };
+      reader.readAsText(e.target.files[0]);
+    });
+  </script>
+</body>
+</html>
