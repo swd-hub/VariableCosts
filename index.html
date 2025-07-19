@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>CSV 金額自動計算</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; margin: 20px 0; width: 100%; }
+    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
+    input, button { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>CSV 金額計算ツール</h1>
+
+  <p>📄 基本データ（品名,容量,単位,予約価格）CSV:</p>
+  <input type="file" id="file1" accept=".csv" />
+  <button id="toggleTable1" style="display: none;">▼ 表示しない</button>
+  <div id="table1"></div>
+
+<p>📄 使用量データ（file2）CSV:</p>
+<input type="file" id="file2" accept=".csv" />
+<button id="toggleTable2" style="display:none;">▼ 表示しない</button>
+<div id="table2"></div>
+
+  <script>
+  let masterData = {}; // 品名 → { usage, unit }
+
+  function parseCSV(content) {
+    return content
+      .trim()
+      .split('\n')
+      .map(row => row.split(',').map(cell => cell.trim()))
+      .map(row => {
+        while (row[row.length - 1] === '') row.pop();
+        return row;
+      });
+  }
+
+function createTable(data) {
+  const table = document.createElement('table');
+  const maxCols = Math.max(...data.map(row => row.length));
+  const headerRow = data[0];
+  const isEditable = headerRow.includes('回数'); // 「回数」列がある表だけ編集可能に
+
+  data.forEach((row, rowIndex) => {
+    const tr = document.createElement('tr');
+
+    for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+      const cell = row[colIndex] !== undefined ? row[colIndex] : '';
+      const tag = rowIndex === 0 ? 'th' : 'td';
+      const td = document.createElement(tag);
+
+      if (rowIndex > 0 && isEditable && headerRow[colIndex] === '回数') {
+        // 回数列は input にする
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.value = cell;
+        input.style.width = '60px';
+        td.appendChild(input);
+      } else {
+        td.textContent = cell;
+      }
+
+      tr.appendChild(td);
+    }
+
+    table.appendChild(tr);
+  });
+
+  return table;
+}
+
+  // ↓ このあと file1, file2 読み込み処理が続く
+
+    // 表の表示・非表示トグル
+    document.getElementById('toggleTable1').addEventListener('click', function () {
+      const tableDiv = document.getElementById('table1');
+      const isVisible = tableDiv.style.display !== 'none';
+      tableDiv.style.display = isVisible ? 'none' : 'block';
+      this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+    });
+
+    // file1：予約価格データ読み込み
+document.getElementById('file1').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const rows = parseCSV(reader.result);
+    rows.slice(1).forEach(row => {
+      const name = row[1]; // 品名
+      const volume = parseFloat((row[2] || '').replace(/,/g, ''));
+      const price = parseFloat((row[4] || '').replace(/,/g, ''));
+
+      if (name && !isNaN(price) && !isNaN(volume)) {
+        priceData[name] = { price, volume };
+      }
+    });
+    const table = createTable(rows);
+    const tableDiv = document.getElementById('table1');
+    tableDiv.innerHTML = '';
+    tableDiv.appendChild(table);
+    tableDiv.style.display = 'block';
+    document.getElementById('toggleTable1').style.display = 'inline';
+    document.getElementById('toggleTable1').textContent = '▼ 表示しない';
+  };
+
+  reader.readAsText(file, 'Shift_JIS'); // ← これがポイント！
+});
+
+
+
+// 表示非表示トグル for file2
+document.getElementById('toggleTable2').addEventListener('click', function () {
+  const tableDiv = document.getElementById('table2');
+  const isVisible = tableDiv.style.display !== 'none';
+  tableDiv.style.display = isVisible ? 'none' : 'block';
+  this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+});
+
+// file2読み込み
+document.getElementById('file2').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const rows = parseCSV(reader.result).filter(r => r.length > 0 && r[0]);
+
+    if (rows.length === 0) {
+      alert("⚠️ file2 に有効なデータ行がありません！");
+      return;
+    }
+
+    const header = rows[0]; // ← 追加列なし！
+
+    const body = rows.slice(1).map(row => {
+      const name = row[0];
+      const currentUsage = row[1];
+      const currentUnit = row[2];
+
+      const fallback = masterData[name] || {};
+
+      // 補完して元の列に反映
+      row[1] = currentUsage || (fallback.usage != null ? fallback.usage : '');
+      row[2] = currentUnit || fallback.unit || '';
+
+      return row;
+    });
+
+    const table = createTable([header, ...body]);
+    const container = document.getElementById('table2');
+    container.innerHTML = '';
+    container.appendChild(table);
+    container.style.display = 'block';
+
+    document.getElementById('toggleTable2').style.display = 'inline';
+    document.getElementById('toggleTable2').textContent = '▼ 表示しない';
+  };
+
+  reader.readAsText(file, 'Shift_JIS');
+});
+
+  </script>
+</body>
+</html>
