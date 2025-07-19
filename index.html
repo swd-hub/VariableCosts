@@ -593,34 +593,44 @@ function loadFile1ViaFetch() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('toggleMoneyBtn');
+  const moneyBtn = document.getElementById('toggleMoneyBtn');
+  if (!moneyBtn) {
+    console.warn('⚠️ toggleMoneyBtn が見つかりません。イベント登録をスキップします');
+    return;
+  }
+
   let showOnlyPriced = false;
 
-  if (btn) {
-    btn.addEventListener('click', () => {
-      const table = document.querySelector('#table2 table');
-      if (!table) return;
+  moneyBtn.addEventListener('click', () => {
+    const table = document.querySelector('#table2 table');
+    if (!table) {
+      console.warn('⚠️ table2 が未表示のため、トグルをスキップします');
+      return;
+    }
 
-      const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-      const priceIndex = headers.indexOf('金額');
-      if (priceIndex === -1) return;
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+    const priceIndex = headers.indexOf('金額');
+    if (priceIndex === -1) {
+      console.warn('⚠️ 金額列が見つかりません');
+      return;
+    }
 
-      showOnlyPriced = !showOnlyPriced;
+    showOnlyPriced = !showOnlyPriced;
 
-      const rows = table.querySelectorAll('tr');
-      rows.forEach((tr, i) => {
-        if (i === 0) return;
-        const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
-        const isNumeric = /^\d[\d,]*$/.test(text);
-        tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
-      });
+    const rows = table.querySelectorAll('tr');
+    rows.forEach((tr, i) => {
+      if (i === 0) return; // ヘッダー行
 
-      btn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+      const cell = tr.querySelectorAll('td')[priceIndex];
+      const text = cell?.textContent?.trim() || '';
+      const isNumeric = /^\d[\d,]*$/.test(text);
+
+      tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
     });
-  }
+
+    moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+  });
 });
-
-
 
   </script>
 </body>
