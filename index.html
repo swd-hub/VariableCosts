@@ -146,6 +146,82 @@ button:hover {
   let masterData = {}; // 品名 → { usage, unit }
   let priceData = {}; // 品名 → { price, volume, unit }
 
+　function loadFile1ViaFetch() {
+    fetch('./資材価格.csv')
+      .then(response => {
+        if (!response.ok) throw new Error('ファイルの読み込みに失敗しました');
+        return response.text();
+      })
+      .then(csvText => {
+        const rows = parseCSV(csvText);
+
+        rows.slice(1).forEach(row => {
+          const name = (row[1] || '').trim();
+          const volume = parseFloat((row[2] || '').replace(/,/g, ''));
+          const unit = (row[3] || '').trim();
+          const price = parseFloat((row[4] || '').replace(/,/g, ''));
+
+          if (name && !isNaN(price) && !isNaN(volume) && unit) {
+            priceData[name] = { price, volume, unit };
+          }
+        });
+
+        const table = createTableForFile1(rows);
+        const tableDiv = document.getElementById('table1');
+        tableDiv.innerHTML = '';
+        tableDiv.appendChild(table);
+        tableDiv.style.display = 'block';
+
+        const toggleBtn = document.getElementById('toggleTable1');
+        toggleBtn.style.display = 'inline';
+        toggleBtn.textContent = '▼ 表示しない';
+      })
+      .catch(err => {
+        alert('資材価格.csv の読み込みに失敗しました：' + err.message);
+      });
+  }
+
+  // ✅ DOMContentLoadedでイベント登録する（表が生成されてから）
+  window.addEventListener('DOMContentLoaded', () => {
+    loadFile1ViaFetch();
+
+    setTimeout(() => {
+      const moneyBtn = document.getElementById('toggleMoneyBtn');
+      if (!moneyBtn) {
+        console.warn('⚠️ toggleMoneyBtn が見つかりません。イベント登録をスキップします');
+        return;
+      }
+
+      let showOnlyPriced = false;
+
+      moneyBtn.addEventListener('click', () => {
+        const table = document.querySelector('#table2 table');
+        if (!table) {
+          console.warn('⚠️ table2 が未表示のため、トグルをスキップします');
+          return;
+        }
+
+        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+        const priceIndex = headers.indexOf('金額');
+        if (priceIndex === -1) {
+          console.warn('⚠️ 金額列が見つかりません');
+          return;
+        }
+
+        showOnlyPriced = !showOnlyPriced;
+
+        const rows = table.querySelectorAll('tr');
+        rows.forEach((tr, i) => {
+          if (i === 0) return;
+          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() || '';
+          const isNumeric = /^\d[\d,]*$/.test(text);
+          tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
+        });
+
+        moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+      });
+    }, 0); // 🔧 わずかな遅延で DOM 完全読込後に実行
+  });	  
 
   function parseCSV(content) {
     return content
@@ -555,82 +631,7 @@ document.querySelectorAll('#moneyFilter button').forEach(btn => {
 });
 
 
-function loadFile1ViaFetch() {
-    fetch('./資材価格.csv')
-      .then(response => {
-        if (!response.ok) throw new Error('ファイルの読み込みに失敗しました');
-        return response.text();
-      })
-      .then(csvText => {
-        const rows = parseCSV(csvText);
 
-        rows.slice(1).forEach(row => {
-          const name = (row[1] || '').trim();
-          const volume = parseFloat((row[2] || '').replace(/,/g, ''));
-          const unit = (row[3] || '').trim();
-          const price = parseFloat((row[4] || '').replace(/,/g, ''));
-
-          if (name && !isNaN(price) && !isNaN(volume) && unit) {
-            priceData[name] = { price, volume, unit };
-          }
-        });
-
-        const table = createTableForFile1(rows);
-        const tableDiv = document.getElementById('table1');
-        tableDiv.innerHTML = '';
-        tableDiv.appendChild(table);
-        tableDiv.style.display = 'block';
-
-        const toggleBtn = document.getElementById('toggleTable1');
-        toggleBtn.style.display = 'inline';
-        toggleBtn.textContent = '▼ 表示しない';
-      })
-      .catch(err => {
-        alert('資材価格.csv の読み込みに失敗しました：' + err.message);
-      });
-  }
-
-  // ✅ DOMContentLoadedでイベント登録する（表が生成されてから）
-  window.addEventListener('DOMContentLoaded', () => {
-    loadFile1ViaFetch();
-
-    setTimeout(() => {
-      const moneyBtn = document.getElementById('toggleMoneyBtn');
-      if (!moneyBtn) {
-        console.warn('⚠️ toggleMoneyBtn が見つかりません。イベント登録をスキップします');
-        return;
-      }
-
-      let showOnlyPriced = false;
-
-      moneyBtn.addEventListener('click', () => {
-        const table = document.querySelector('#table2 table');
-        if (!table) {
-          console.warn('⚠️ table2 が未表示のため、トグルをスキップします');
-          return;
-        }
-
-        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-        const priceIndex = headers.indexOf('金額');
-        if (priceIndex === -1) {
-          console.warn('⚠️ 金額列が見つかりません');
-          return;
-        }
-
-        showOnlyPriced = !showOnlyPriced;
-
-        const rows = table.querySelectorAll('tr');
-        rows.forEach((tr, i) => {
-          if (i === 0) return;
-          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() || '';
-          const isNumeric = /^\d[\d,]*$/.test(text);
-          tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
-        });
-
-        moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
-      });
-    }, 0); // 🔧 わずかな遅延で DOM 完全読込後に実行
-  });
   </script>
 </body>
 </html>
