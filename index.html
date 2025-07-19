@@ -592,9 +592,15 @@ function loadFile1ViaFetch() {
     });
 }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    loadFile1ViaFetch();
-  });
+window.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('toggleMoneyBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      // トグル処理…
+    });
+  }
+});
+
   </script>
 </body>
 </html>
