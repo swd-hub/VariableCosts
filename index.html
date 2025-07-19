@@ -4,10 +4,74 @@
   <meta charset="UTF-8" />
   <title>CSV 金額自動計算</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    table { border-collapse: collapse; margin: 20px 0; width: 100%; }
-    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
-    input, button { margin-bottom: 10px; }
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background-color: #f7f9fc;
+  color: #333;
+  padding: 30px;
+  line-height: 1.6;
+}
+
+h1 {
+  font-size: 1.8em;
+  color: #006c9c;
+  margin-bottom: 20px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-top: 20px;
+}
+
+th {
+  background-color: #e3edf4;
+  color: #333;
+  font-weight: bold;
+  padding: 10px;
+  border-bottom: 2px solid #ccc;
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:hover td {
+  background-color: #f0f8ff;
+}
+
+input[type="number"] {
+  width: 70px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  background-color: #007bb5;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  margin-right: 8px;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background-color: #005f8e;
+}
+
+#totalCost {
+  font-size: 1.1em;
+  margin-top: 15px;
+  color: #444;
+}
+
   </style>
 </head>
 <body>
@@ -19,12 +83,21 @@
   <div id="table1"></div>
 
 <p>📄 使用量データ（file2）CSV:</p>
-<input type="file" id="file2" accept=".csv" />
-<button id="toggleTable2" style="display:none;">▼ 表示しない</button>
-<div id="table2"></div>
+<div id="file2-controls">
+  <input type="file" id="file2" accept=".csv" />
+  <button id="toggleTable2" style="display: none;">▼ 表を表示</button>
+  <button id="calcFile2" style="display: none;">🧮 計算する</button>
+</div>
+<div id="totalCost" style="margin-top: 10px; font-weight: bold;">
+  10アールあたり変動費：<span id="costPer10a">—</span> 円
+</div>
+
+<div id="table2" style="display: none;"></div>
 
   <script>
   let masterData = {}; // 品名 → { usage, unit }
+  let priceData = {}; // 品名 → { price, volume, unit }
+
 
   function parseCSV(content) {
     return content
@@ -39,30 +112,67 @@
 
 function createTable(data) {
   const table = document.createElement('table');
-  const maxCols = Math.max(...data.map(row => row.length));
+
+  // 金額列を追加（回数の後ろ）
   const headerRow = data[0];
-  const isEditable = headerRow.includes('回数'); // 「回数」列がある表だけ編集可能に
+  const calcColIndex = headerRow.indexOf('回数') + 1;
+
+  const newHeader = [...headerRow];
+  newHeader.splice(calcColIndex, 0, '金額');
+
+  // データ本体を金額列付きに再構築
+  const newData = data.slice(1).map(row => {
+    const newRow = [...row];
+    newRow.splice(calcColIndex, 0, ''); // 金額：初期値 空
+    return newRow;
+  });
+
+  const finalData = [newHeader, ...newData];
+  const isEditable = newHeader.includes('回数');
+
+  finalData.forEach((row, rowIndex) => {
+    const tr = document.createElement('tr');
+
+    newHeader.forEach((colName, colIndex) => {
+      const cellValue = row[colIndex] ?? '';
+      const tag = rowIndex === 0 ? 'th' : 'td';
+      const td = document.createElement(tag);
+
+      if (rowIndex > 0 && colName === '回数') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.value = cellValue;
+        input.style.width = '60px';
+        td.appendChild(input);
+      } else if (rowIndex > 0 && colName === '金額') {
+        td.textContent = '（自動計算）';
+      } else {
+        td.textContent = cellValue;
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+
+  return table;
+}
+
+function createTableForFile1(data) {
+  const table = document.createElement('table');
+
+  // 最大列数を算出して空欄補完に使う
+  const maxCols = Math.max(...data.map(row => row.length));
 
   data.forEach((row, rowIndex) => {
     const tr = document.createElement('tr');
 
     for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-      const cell = row[colIndex] !== undefined ? row[colIndex] : '';
       const tag = rowIndex === 0 ? 'th' : 'td';
       const td = document.createElement(tag);
-
-      if (rowIndex > 0 && isEditable && headerRow[colIndex] === '回数') {
-        // 回数列は input にする
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.min = '0';
-        input.value = cell;
-        input.style.width = '60px';
-        td.appendChild(input);
-      } else {
-        td.textContent = cell;
-      }
-
+      td.textContent = row[colIndex] !== undefined ? row[colIndex] : ''; // 空欄補完
       tr.appendChild(td);
     }
 
@@ -89,36 +199,33 @@ document.getElementById('file1').addEventListener('change', function (e) {
 
   reader.onload = function () {
     const rows = parseCSV(reader.result);
-    rows.slice(1).forEach(row => {
-      const name = row[1]; // 品名
-      const volume = parseFloat((row[2] || '').replace(/,/g, ''));
-      const price = parseFloat((row[4] || '').replace(/,/g, ''));
 
-      if (name && !isNaN(price) && !isNaN(volume)) {
-        priceData[name] = { price, volume };
+    rows.slice(1).forEach(row => {
+      const name = (row[1] || '').trim(); // 品名
+      const volume = parseFloat((row[2] || '').replace(/,/g, '')); // 容量
+      const unit = (row[3] || '').trim(); // 単位（こよみ表示）
+      const price = parseFloat((row[4] || '').replace(/,/g, '')); // 予約参考価格（税込）
+
+      if (name && !isNaN(price) && !isNaN(volume) && unit) {
+        priceData[name] = { price, volume, unit }; // 🌟 単位を追加
       }
     });
-    const table = createTable(rows);
+
+    const table = createTableForFile1(rows);
     const tableDiv = document.getElementById('table1');
     tableDiv.innerHTML = '';
     tableDiv.appendChild(table);
     tableDiv.style.display = 'block';
-    document.getElementById('toggleTable1').style.display = 'inline';
-    document.getElementById('toggleTable1').textContent = '▼ 表示しない';
+
+    const toggleBtn = document.getElementById('toggleTable1');
+    toggleBtn.style.display = 'inline';
+    toggleBtn.textContent = '▼ 表示しない';
   };
 
-  reader.readAsText(file, 'Shift_JIS'); // ← これがポイント！
+  reader.readAsText(file, 'Shift_JIS');
 });
 
 
-
-// 表示非表示トグル for file2
-document.getElementById('toggleTable2').addEventListener('click', function () {
-  const tableDiv = document.getElementById('table2');
-  const isVisible = tableDiv.style.display !== 'none';
-  tableDiv.style.display = isVisible ? 'none' : 'block';
-  this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
-});
 
 // file2読み込み
 document.getElementById('file2').addEventListener('change', function (e) {
@@ -133,16 +240,13 @@ document.getElementById('file2').addEventListener('change', function (e) {
       return;
     }
 
-    const header = rows[0]; // ← 追加列なし！
-
+    const header = rows[0];
     const body = rows.slice(1).map(row => {
       const name = row[0];
       const currentUsage = row[1];
       const currentUnit = row[2];
-
       const fallback = masterData[name] || {};
 
-      // 補完して元の列に反映
       row[1] = currentUsage || (fallback.usage != null ? fallback.usage : '');
       row[2] = currentUnit || fallback.unit || '';
 
@@ -155,11 +259,85 @@ document.getElementById('file2').addEventListener('change', function (e) {
     container.appendChild(table);
     container.style.display = 'block';
 
-    document.getElementById('toggleTable2').style.display = 'inline';
-    document.getElementById('toggleTable2').textContent = '▼ 表示しない';
+    // ボタン表示もここで制御！
+    const toggleBtn = document.getElementById('toggleTable2');
+    toggleBtn.style.display = 'inline-block';
+    toggleBtn.textContent = '▼ 表示しない';
+
+    const calcBtn = document.getElementById('calcFile2');
+    calcBtn.style.display = 'inline-block';
   };
 
   reader.readAsText(file, 'Shift_JIS');
+});
+
+// 表示・非表示トグル
+document.getElementById('toggleTable2').addEventListener('click', function () {
+  const tableDiv = document.getElementById('table2');
+  const isVisible = tableDiv.style.display !== 'none';
+  tableDiv.style.display = isVisible ? 'none' : 'block';
+
+  this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+
+  // 計算ボタンも連動して表示切り替え
+  const calcBtn = document.getElementById('calcFile2');
+  calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+});
+
+document.getElementById('calcFile2').addEventListener('click', function () {
+  const table = document.querySelector('#table2 table');
+  if (!table) {
+    console.warn("⚠️ 表がまだ表示されていないため、計算をスキップします");
+    return;
+  }
+
+  const headers = Array.from(table.querySelector('tr').querySelectorAll('th')).map(th => th.textContent);
+  const idx = {
+    name: headers.indexOf('品名'),
+    amountPer10a: headers.indexOf('１０アール量'),
+    unit: headers.indexOf('単位'),
+    count: headers.indexOf('回数'),
+    price: headers.indexOf('金額')
+  };
+
+  const rows = Array.from(table.querySelectorAll('tr')).slice(1); // データ行だけ
+  let total = 0;
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+
+    const name = cells[idx.name]?.textContent?.trim();
+    const amountPer10a = parseFloat(cells[idx.amountPer10a]?.textContent || 0);
+    const unit = cells[idx.unit]?.textContent?.trim();
+    const count = parseFloat(cells[idx.count]?.querySelector('input')?.value || 0);
+
+    const priceCell = cells[idx.price];
+
+    const info = priceData[name];
+    if (!info || isNaN(info.price) || isNaN(info.volume)) {
+      priceCell.textContent = '―';
+      return;
+    }
+
+    if (unit !== info.unit) {
+      priceCell.textContent = '単位不一致';
+      return;
+    }
+
+    const unitPrice = info.price / info.volume;
+    const amount = unitPrice * amountPer10a * count;
+    priceCell.textContent = amount.toLocaleString();
+
+    // 合計集計（回数0除外・数値判定）
+    if (count > 0 && !isNaN(amount)) {
+      total += amount;
+    }
+  });
+
+  const costSpan = document.getElementById('costPer10a');
+  if (costSpan) {
+    costSpan.textContent = Math.round(total).toLocaleString(); // ← 小数なしも対応済み
+  }
 });
 
   </script>
