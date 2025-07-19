@@ -593,11 +593,11 @@ function loadFile1ViaFetch() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const moneyBtn = document.getElementById('toggleMoneyBtn');
+  const btn = document.getElementById('toggleMoneyBtn');
   let showOnlyPriced = false;
 
-  if (moneyBtn) {
-    moneyBtn.addEventListener('click', () => {
+  if (btn) {
+    btn.addEventListener('click', () => {
       const table = document.querySelector('#table2 table');
       if (!table) return;
 
@@ -609,19 +609,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const rows = table.querySelectorAll('tr');
       rows.forEach((tr, i) => {
-        if (i === 0) return; // ヘッダーは常に表示
-
-        const td = tr.querySelectorAll('td')[priceIndex];
-        const text = td?.textContent?.trim() ?? '';
+        if (i === 0) return;
+        const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
         const isNumeric = /^\d[\d,]*$/.test(text);
-
         tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
       });
 
-      moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+      btn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
     });
   }
 });
+
 
 
   </script>
