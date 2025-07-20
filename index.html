@@ -145,44 +145,8 @@ button:hover {
   <script>
   let masterData = {}; // 品名 → { usage, unit }
   let priceData = {}; // 品名 → { price, volume, unit }
-
-　function loadFile1ViaFetch() {
-  fetch('./資材価格.csv')
-    .then(response => response.arrayBuffer()) // ← バイナリ取得
-    .then(buffer => {
-      const decoder = new TextDecoder('shift_jis'); // SJISデコーダー
-      const csvText = decoder.decode(buffer);
-
-      const rows = parseCSV(csvText); // 既存のCSVパーサー使用OK
-
-      rows.slice(1).forEach(row => {
-        const name = (row[1] || '').trim();
-        const volume = parseFloat((row[2] || '').replace(/,/g, ''));
-        const unit   = (row[3] || '').trim();
-        const price  = parseFloat((row[4] || '').replace(/,/g, ''));
-
-        if (name && !isNaN(price) && !isNaN(volume) && unit) {
-          priceData[name] = { price, volume, unit };
-        }
-      });
-
-      const table = createTableForFile1(rows);
-      const tableDiv = document.getElementById('table1');
-      tableDiv.innerHTML = '';
-      tableDiv.appendChild(table);
-      tableDiv.style.display = 'block';
-
-      const toggleBtn = document.getElementById('toggleTable1');
-      toggleBtn.style.display = 'inline';
-      toggleBtn.textContent = '▼ 表示しない';
-    })
-    .catch(err => {
-      alert('資材価格.csv の読み込みに失敗しました：' + err.message);
-    });
-}
-
-
-  // ✅ DOMContentLoadedでイベント登録する（表が生成されてから）
+    
+// ✅ DOMContentLoadedでイベント登録する（表が生成されてから）
   window.addEventListener('DOMContentLoaded', () => {
     loadFile1ViaFetch();
 
@@ -234,6 +198,43 @@ button:hover {
         return row;
       });
   }
+　function loadFile1ViaFetch() {
+  fetch('./資材価格.csv')
+    .then(response => response.arrayBuffer()) // ← バイナリ取得
+    .then(buffer => {
+      const decoder = new TextDecoder('shift_jis'); // SJISデコーダー
+      const csvText = decoder.decode(buffer);
+
+      const rows = parseCSV(csvText); // 既存のCSVパーサー使用OK
+
+      rows.slice(1).forEach(row => {
+        const name = (row[1] || '').trim();
+        const volume = parseFloat((row[2] || '').replace(/,/g, ''));
+        const unit   = (row[3] || '').trim();
+        const price  = parseFloat((row[4] || '').replace(/,/g, ''));
+
+        if (name && !isNaN(price) && !isNaN(volume) && unit) {
+          priceData[name] = { price, volume, unit };
+        }
+      });
+
+      const table = createTableForFile1(rows);
+      const tableDiv = document.getElementById('table1');
+      tableDiv.innerHTML = '';
+      tableDiv.appendChild(table);
+      tableDiv.style.display = 'block';
+
+      const toggleBtn = document.getElementById('toggleTable1');
+      toggleBtn.style.display = 'inline';
+      toggleBtn.textContent = '▼ 表示しない';
+    })
+    .catch(err => {
+      alert('資材価格.csv の読み込みに失敗しました：' + err.message);
+    });
+}
+
+
+  
 
 
 function createTable(data) {
