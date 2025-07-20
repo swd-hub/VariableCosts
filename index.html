@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>CSV 金額自動計算</title>
+  <title>単位面積あたり変動費計算</title>
   <style>
 body {
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -107,11 +107,11 @@ button:hover {
   </style>
 </head>
 <body>
-  <h1>CSV 金額計算ツール</h1>
+  <h1>単位面積あたり変動費計算</h1>
 
   <!-- 🔷 file1：基本データ（資材価格） -->
   <section id="file1-area">
-    <p>📄 基本データ（品名・容量・単位・予約価格）</p>
+    <p>📄 資材価格（品名・容量・単位・予約価格）</p>
     <button id="toggleTable1" style="display: inline;">▼ 表示しない</button>
     <div id="table1" style="display: block;"></div>
   </section>
@@ -120,7 +120,7 @@ button:hover {
 
   <!-- 🔷 file2：使用量データ（入力＆計算） -->
   <section id="file2-area">
-    <p>📄 使用量データ（品目・使用量・単位・回数）</p>
+    <p>📄 こよみデータ（品目・使用量・単位・回数）</p>
 
     <div id="file2-controls" style="margin-bottom: 10px;">
       <input type="file" id="file2" accept=".csv" />
