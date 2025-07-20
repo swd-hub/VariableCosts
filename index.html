@@ -158,23 +158,42 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ file2 の input が見つかりません。');
   }
 
-  // ✅ 表示切替トグル（表2）のイベントは先に登録してOK
-  const toggleTableBtn = document.getElementById('toggleTable2');
-  if (toggleTableBtn) {
-    toggleTableBtn.addEventListener('click', () => {
-      const tableDiv = document.getElementById('table2');
-      const calcBtn = document.getElementById('calcFile2');
-      if (!tableDiv) return;
+  // ✅ 表1 表示切替トグルボタン登録
+  const toggleTable1Btn = document.getElementById('toggleTable1');
+  if (toggleTable1Btn) {
+    toggleTable1Btn.addEventListener('click', function () {
+      const table1 = document.getElementById('table1');
+      if (!table1) return;
 
-      const isVisible = tableDiv.style.display !== 'none';
-      tableDiv.style.display = isVisible ? 'none' : 'block';
-      toggleTableBtn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
-      if (calcBtn) calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+      const isVisible = table1.style.display !== 'none';
+      table1.style.display = isVisible ? 'none' : 'block';
+      this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
     });
+  } else {
+    console.warn('⚠️ toggleTable1 ボタンが見つかりません');
+  }
+
+  // ✅ 表2 表示切替トグルボタン登録
+  const toggleTable2Btn = document.getElementById('toggleTable2');
+  if (toggleTable2Btn) {
+    toggleTable2Btn.addEventListener('click', function () {
+      const table2 = document.getElementById('table2');
+      const calcBtn = document.getElementById('calcFile2');
+      if (!table2) return;
+
+      const isVisible = table2.style.display !== 'none';
+      table2.style.display = isVisible ? 'none' : 'block';
+      this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+
+      if (calcBtn) {
+        calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+      }
+    });
+  } else {
+    console.warn('⚠️ toggleTable2 ボタンが見つかりません');
   }
 });
 
-  
 
   function parseCSV(content) {
     return content
