@@ -487,11 +487,11 @@ document.getElementById('file2')?.addEventListener('change', function (e) {
     const calcBtn = document.getElementById('calcFile2');
     if (calcBtn) calcBtn.style.display = 'inline-block';
 
-    const oldMoneyBtn = document.getElementById('toggleMoneyBtn');
-    if (oldMoneyBtn) {
-      const newBtn = oldMoneyBtn.cloneNode(true);
-      newBtn.id = 'toggleMoneyBtn'; // ID復元
-      oldMoneyBtn.replaceWith(newBtn);
+    const oldBtn = document.getElementById('toggleMoneyBtn');
+    if (oldBtn) {
+      const newBtn = oldBtn.cloneNode(true);
+      newBtn.id = 'toggleMoneyBtn';
+      oldBtn.replaceWith(newBtn);
       newBtn.style.display = 'inline-block';
 
       let showOnlyPriced = false;
@@ -523,7 +523,6 @@ document.getElementById('file2')?.addEventListener('change', function (e) {
 
   reader.readAsText(file, 'Shift_JIS');
 });
-
 
     const table = createTable([header, ...body]);
     const container = document.getElementById('table2');
