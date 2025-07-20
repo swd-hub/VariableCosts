@@ -442,7 +442,6 @@ document.getElementById('file1').addEventListener('change', function (e) {
 
 
 
-// file2読み込み
 document.getElementById('file2').addEventListener('change', function (e) {
   const file = e.target.files[0];
   const reader = new FileReader();
@@ -474,27 +473,54 @@ document.getElementById('file2').addEventListener('change', function (e) {
     container.appendChild(table);
     container.style.display = 'block';
 
-    // ✅ 金額表示を初期化（← 追加）
     const costSpan = document.getElementById('costPer10a');
     if (costSpan) {
       costSpan.textContent = '—';
     }
 
-    // ボタン表示もここで制御！
     const toggleBtn = document.getElementById('toggleTable2');
     toggleBtn.style.display = 'inline-block';
     toggleBtn.textContent = '▼ 表示しない';
 
     const calcBtn = document.getElementById('calcFile2');
     calcBtn.style.display = 'inline-block';
-    
-	    // ✅ 🔽 これを追加！
-	const moneyBtn = document.getElementById('toggleMoneyBtn');
-	moneyBtn.style.display = 'inline-block';
+
+    const moneyBtn = document.getElementById('toggleMoneyBtn');
+    if (moneyBtn) {
+      moneyBtn.style.display = 'inline-block';
+
+      // 🔄 前回のリスナーを解除（匿名関数なので直接外せない → 上書き回避策）
+      moneyBtn.replaceWith(moneyBtn.cloneNode(true));
+      const newBtn = document.getElementById('toggleMoneyBtn');
+
+      let showOnlyPriced = false;
+
+      newBtn.addEventListener('click', () => {
+        const table = document.querySelector('#table2 table');
+        if (!table) return;
+
+        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+        const priceIndex = headers.indexOf('金額');
+        if (priceIndex === -1) return;
+
+        showOnlyPriced = !showOnlyPriced;
+
+        const rows = table.querySelectorAll('tr');
+        rows.forEach((tr, i) => {
+          if (i === 0) return;
+          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
+          const isValid = /^\d[\d,]*$/.test(text);
+          tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
+        });
+
+        newBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+      });
+    }
   };
 
   reader.readAsText(file, 'Shift_JIS');
 });
+
 
 // 表示・非表示トグル
 document.getElementById('toggleTable2').addEventListener('click', function () {
