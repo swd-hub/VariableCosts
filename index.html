@@ -405,8 +405,6 @@ function createTableForFile1(data) {
 
 
 
-  // ↓ このあと file1, file2 読み込み処理が続く
-
 function handleFile2Load(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -439,65 +437,62 @@ function handleFile2Load(e) {
     container.innerHTML = '';
     container.appendChild(table);
     container.style.display = 'block';
-　　const toggleBtn = document.getElementById('toggleTable2');
-if (toggleBtn) {
-  toggleBtn.style.display = 'inline-block';
-  toggleBtn.textContent = '▼ 表示しない';
 
-  toggleBtn.replaceWith(toggleBtn.cloneNode(true));
-  const newToggleBtn = document.getElementById('toggleTable2');
+    // ✅ 表2トグルボタン（toggleTable2）表示＆イベント登録
+    const toggleTable2Btn = document.getElementById('toggleTable2');
+    if (toggleTable2Btn) {
+      toggleTable2Btn.style.display = 'inline-block';
+      toggleTable2Btn.textContent = '▼ 表示しない';
 
-  newToggleBtn.style.display = 'inline-block';
-  newToggleBtn.textContent = '▼ 表示しない';
+      if (!toggleTable2Btn.dataset.listenerAttached) {
+        toggleTable2Btn.dataset.listenerAttached = 'true';
 
-  newToggleBtn.addEventListener('click', () => {
-    const table2 = document.getElementById('table2');
-    const calcBtn = document.getElementById('calcFile2');
-    if (!table2) return;
+        toggleTable2Btn.addEventListener('click', () => {
+          const table2 = document.getElementById('table2');
+          const calcBtn = document.getElementById('calcFile2');
+          if (!table2) return;
 
-    const isVisible = getComputedStyle(table2).display !== 'none';
-    table2.style.display = isVisible ? 'none' : 'block';
-    newToggleBtn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+          const isVisible = getComputedStyle(table2).display !== 'none';
+          table2.style.display = isVisible ? 'none' : 'block';
+          toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
-    if (calcBtn) {
-      calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+          if (calcBtn) {
+            calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+          }
+        });
+      }
     }
-  });
-}
 
+    // ✅ 金額合計初期化
     const costSpan = document.getElementById('costPer10a');
     if (costSpan) costSpan.textContent = '—';
 
-    const toggleBtn = document.getElementById('toggleTable2');
-    if (toggleBtn) {
-      toggleBtn.style.display = 'inline-block';
-      toggleBtn.textContent = '▼ 表示しない';
-    }
-
+    // ✅ 計算ボタン表示
     const calcBtn = document.getElementById('calcFile2');
     if (calcBtn) calcBtn.style.display = 'inline-block';
 
-    // ✅ 金額トグルボタン表示＆イベント登録
-    const oldBtn = document.getElementById('toggleMoneyBtn');
-    if (oldBtn) {
-      const newBtn = oldBtn.cloneNode(true);
-      newBtn.id = 'toggleMoneyBtn';
-      oldBtn.replaceWith(newBtn);
-      newBtn.style.display = 'inline-block';
+    // ✅ 金額トグルボタン表示＆イベント登録（安全処理）
+    const oldMoneyBtn = document.getElementById('toggleMoneyBtn');
+    if (oldMoneyBtn) {
+      const newMoneyBtn = oldMoneyBtn.cloneNode(true);
+      newMoneyBtn.id = 'toggleMoneyBtn';
+      oldMoneyBtn.replaceWith(newMoneyBtn);
+      newMoneyBtn.style.display = 'inline-block';
+      newMoneyBtn.textContent = '▶ 金額ありのみ表示';
 
       let showOnlyPriced = false;
 
-      newBtn.addEventListener('click', () => {
-        const table = document.querySelector('#table2 table');
-        if (!table) return;
+      newMoneyBtn.addEventListener('click', () => {
+        const tableEl = document.querySelector('#table2 table');
+        if (!tableEl) return;
 
-        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+        const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
         const priceIndex = headers.indexOf('金額');
         if (priceIndex === -1) return;
 
         showOnlyPriced = !showOnlyPriced;
 
-        const rows = table.querySelectorAll('tr');
+        const rows = tableEl.querySelectorAll('tr');
         rows.forEach((tr, i) => {
           if (i === 0) return;
           const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
@@ -505,7 +500,7 @@ if (toggleBtn) {
           tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
         });
 
-        newBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+        newMoneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
       });
     } else {
       console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
