@@ -240,21 +240,15 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 }
 
-
-  
-
-
 function createTable(data) {
   const table = document.createElement('table');
 
-  // 金額列を追加（回数の後ろ）
   const headerRow = data[0];
   const calcColIndex = headerRow.indexOf('回数') + 1;
 
   const newHeader = [...headerRow];
   newHeader.splice(calcColIndex, 0, '金額');
 
-  // データ行に金額列を挿入（初期値は空）
   const newData = data.slice(1).map(row => {
     const newRow = [...row];
     newRow.splice(calcColIndex, 0, '');
@@ -263,7 +257,6 @@ function createTable(data) {
 
   const finalData = [newHeader, ...newData];
 
-  // 備考フィルター用のユニーク値一覧
   const remarkColIndex = newHeader.indexOf('備考');
   const remarkValues = [...new Set(
     finalData.slice(1).map(row => row[remarkColIndex]).filter(v => v)
@@ -278,11 +271,10 @@ function createTable(data) {
       const td = document.createElement(tag);
       td.style.textAlign = 'right';
 
-      // ✅ 備考フィルター（1行目・備考列）
+      // ✅ 1行目：備考フィルターセレクト
       if (rowIndex === 0 && colIndex === remarkColIndex) {
         const select = document.createElement('select');
         select.style.width = '100%';
-
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = '▼ 備考フィルター';
@@ -308,11 +300,11 @@ function createTable(data) {
 
         td.appendChild(select);
 
-      // ✅ 金額列（1行目 → 表示だけ）
+      // ✅ 1行目：金額列ラベル
       } else if (rowIndex === 0 && colName === '金額') {
         td.textContent = '金額';
 
-      // ✅ 入力欄（回数列）
+      // ✅ データ行：回数列（入力可能）
       } else if (rowIndex > 0 && colName === '回数') {
         const input = document.createElement('input');
         input.type = 'number';
@@ -322,11 +314,22 @@ function createTable(data) {
         input.style.textAlign = 'right';
         td.appendChild(input);
 
-      // ✅ 金額列（初期値は —）
+      // ✅ データ行：１０アール量列（入力可能！）
+      } else if (rowIndex > 0 && colName === '１０アール量') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = 'any';
+        input.value = cellValue;
+        input.style.width = '80px';
+        input.style.textAlign = 'right';
+        td.appendChild(input);
+
+      // ✅ データ行：金額列
       } else if (rowIndex > 0 && colName === '金額') {
         td.textContent = '—';
 
-      // ✅ その他のセル
+      // ✅ その他のセルはそのまま表示
       } else {
         td.textContent = cellValue;
       }
