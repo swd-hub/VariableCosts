@@ -442,8 +442,10 @@ document.getElementById('file1').addEventListener('change', function (e) {
 
 
 
-document.getElementById('file2').addEventListener('change', function (e) {
+document.getElementById('file2')?.addEventListener('change', function (e) {
   const file = e.target.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
 
   reader.onload = function () {
@@ -474,24 +476,23 @@ document.getElementById('file2').addEventListener('change', function (e) {
     container.style.display = 'block';
 
     const costSpan = document.getElementById('costPer10a');
-    if (costSpan) {
-      costSpan.textContent = '—';
-    }
+    if (costSpan) costSpan.textContent = '—';
 
     const toggleBtn = document.getElementById('toggleTable2');
-    toggleBtn.style.display = 'inline-block';
-    toggleBtn.textContent = '▼ 表示しない';
+    if (toggleBtn) {
+      toggleBtn.style.display = 'inline-block';
+      toggleBtn.textContent = '▼ 表示しない';
+    }
 
     const calcBtn = document.getElementById('calcFile2');
-    calcBtn.style.display = 'inline-block';
+    if (calcBtn) calcBtn.style.display = 'inline-block';
 
-    const moneyBtn = document.getElementById('toggleMoneyBtn');
-    if (moneyBtn) {
-      moneyBtn.style.display = 'inline-block';
-
-      // 🔄 前回のリスナーを解除（匿名関数なので直接外せない → 上書き回避策）
-      moneyBtn.replaceWith(moneyBtn.cloneNode(true));
-      const newBtn = document.getElementById('toggleMoneyBtn');
+    const oldBtn = document.getElementById('toggleMoneyBtn');
+    if (oldBtn) {
+      const newBtn = oldBtn.cloneNode(true);
+      newBtn.id = 'toggleMoneyBtn'; // ✅ ID復元
+      oldBtn.replaceWith(newBtn);
+      newBtn.style.display = 'inline-block';
 
       let showOnlyPriced = false;
 
