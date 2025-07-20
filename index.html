@@ -494,10 +494,10 @@ document.getElementById('file2')?.addEventListener('change', function (e) {
       newBtn.id = 'toggleMoneyBtn'; // ✅ ID復元
       oldBtn.replaceWith(newBtn);
       newBtn.style.display = 'inline-block';
-
+    
       let showOnlyPriced = false;
 
-      newBtn.addEventListener('click', () => {
+  newBtn.addEventListener('click', () => {
         const table = document.querySelector('#table2 table');
         if (!table) return;
 
