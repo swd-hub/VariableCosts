@@ -441,7 +441,7 @@ document.getElementById('file1').addEventListener('change', function (e) {
 });
 
 
-//file2読み込み
+// file2 読み込み処理（構文エラー対策済み）
 document.getElementById('file2')?.addEventListener('change', function (e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -490,7 +490,7 @@ document.getElementById('file2')?.addEventListener('change', function (e) {
     const oldBtn = document.getElementById('toggleMoneyBtn');
     if (oldBtn) {
       const newBtn = oldBtn.cloneNode(true);
-      newBtn.id = 'toggleMoneyBtn';
+      newBtn.id = 'toggleMoneyBtn'; // ✅ ID復元
       oldBtn.replaceWith(newBtn);
       newBtn.style.display = 'inline-block';
 
@@ -519,59 +519,8 @@ document.getElementById('file2')?.addEventListener('change', function (e) {
     } else {
       console.warn("⚠️ toggleMoneyBtn が DOM に存在しません");
     }
-  };
+  }; // ✅ reader.onload の閉じ括弧
 
-  reader.readAsText(file, 'Shift_JIS');
-});
-
-    const table = createTable([header, ...body]);
-    const container = document.getElementById('table2');
-    container.innerHTML = '';
-    container.appendChild(table);
-    container.style.display = 'block';
-
-    const costSpan = document.getElementById('costPer10a');
-    if (costSpan) costSpan.textContent = '—';
-
-    const toggleBtn = document.getElementById('toggleTable2');
-    if (toggleBtn) {
-      toggleBtn.style.display = 'inline-block';
-      toggleBtn.textContent = '▼ 表示しない';
-    }
-
-    const calcBtn = document.getElementById('calcFile2');
-    if (calcBtn) calcBtn.style.display = 'inline-block';
-
-    const oldBtn = document.getElementById('toggleMoneyBtn');
-    if (oldBtn) {
-      const newBtn = oldBtn.cloneNode(true);
-      newBtn.id = 'toggleMoneyBtn'; // ✅ ID復元
-      oldBtn.replaceWith(newBtn);
-      newBtn.style.display = 'inline-block';
-
-      let showOnlyPriced = false;
-
-      newBtn.addEventListener('click', () => {
-        const table = document.querySelector('#table2 table');
-        if (!table) return;
-
-        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-        const priceIndex = headers.indexOf('金額');
-        if (priceIndex === -1) return;
-
-        showOnlyPriced = !showOnlyPriced;
-
-        const rows = table.querySelectorAll('tr');
-        rows.forEach((tr, i) => {
-          if (i === 0) return;
-          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
-          const isValid = /^\d[\d,]*$/.test(text);
-          tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
-        });
-
-        newBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
-      });
-    }
   reader.readAsText(file, 'Shift_JIS');
 });
 
