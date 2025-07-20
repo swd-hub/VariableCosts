@@ -150,7 +150,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // file1（資材価格）の読み込み
   loadFile1ViaFetch();
 
-  // file2ファイル選択イベント登録（handleFile2Loadで表表示＋ボタン処理）
+  // file2ファイル選択イベント登録
   const file2Input = document.getElementById('file2');
   if (file2Input) {
     file2Input.addEventListener('change', handleFile2Load);
@@ -161,13 +161,14 @@ window.addEventListener('DOMContentLoaded', () => {
   // ✅ 表1 表示切替トグルボタン登録
   const toggleTable1Btn = document.getElementById('toggleTable1');
   if (toggleTable1Btn) {
-    toggleTable1Btn.addEventListener('click', function () {
+    toggleTable1Btn.style.display = 'inline'; // 🔥 ← この1行追加で初期表示OK
+    toggleTable1Btn.addEventListener('click', () => {
       const table1 = document.getElementById('table1');
       if (!table1) return;
 
-      const isVisible = table1.style.display !== 'none';
+      const isVisible = getComputedStyle(table1).display !== 'none';
       table1.style.display = isVisible ? 'none' : 'block';
-      this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+      toggleTable1Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
     });
   } else {
     console.warn('⚠️ toggleTable1 ボタンが見つかりません');
@@ -176,14 +177,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // ✅ 表2 表示切替トグルボタン登録
   const toggleTable2Btn = document.getElementById('toggleTable2');
   if (toggleTable2Btn) {
-    toggleTable2Btn.addEventListener('click', function () {
+    toggleTable2Btn.style.display = 'inline-block'; // 🔥 ← 同様に初期表示調整
+    toggleTable2Btn.addEventListener('click', () => {
       const table2 = document.getElementById('table2');
       const calcBtn = document.getElementById('calcFile2');
       if (!table2) return;
 
-      const isVisible = table2.style.display !== 'none';
+      const isVisible = getComputedStyle(table2).display !== 'none';
       table2.style.display = isVisible ? 'none' : 'block';
-      this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+      toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
       if (calcBtn) {
         calcBtn.style.display = isVisible ? 'none' : 'inline-block';
@@ -193,6 +195,7 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ toggleTable2 ボタンが見つかりません');
   }
 });
+
 
 
   function parseCSV(content) {
@@ -205,6 +208,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return row;
       });
   }
+    
 　function loadFile1ViaFetch() {
   fetch('./資材価格.csv')
     .then(response => response.arrayBuffer()) // ← バイナリ取得
