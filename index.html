@@ -321,17 +321,7 @@ function createTable(data) {
         input.style.width = '60px';
         input.style.textAlign = 'right';
         td.appendChild(input);
-        
-　　　// ✅ データ行：１０アール量 → 入力欄に変更
-      } else if (rowIndex > 0 && colName === '１０アール量') {
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.min = '0';
-        input.value = cellValue;
-        input.style.width = '80px';
-        input.style.textAlign = 'right';
-        td.appendChild
-        
+
       // ✅ 金額列（初期値は —）
       } else if (rowIndex > 0 && colName === '金額') {
         td.textContent = '—';
