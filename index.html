@@ -125,7 +125,7 @@ button:hover {
     <p>📄 使用量データ（品目・使用量・単位・回数）</p>
 
     <div id="file2-controls" style="margin-bottom: 10px;">
-      <input type="file" id="file2" accept=".csv" />
+      <input type="file" id="file2" accept=".csv" style="display: block;" />
       <button id="toggleTable2" style="display: none;">▼ 表を表示</button>
       <button id="calcFile2" style="display: none;">🧮 計算する</button>
       <button id="toggleMoneyBtn" style="display: none;">▶ 金額ありのみ表示</button>
@@ -147,46 +147,53 @@ button:hover {
   let priceData = {}; // 品名 → { price, volume, unit }
     
 // ✅ DOMContentLoadedでイベント登録する（表が生成されてから）
-  window.addEventListener('DOMContentLoaded', () => {
-    loadFile1ViaFetch();
+window.addEventListener('DOMContentLoaded', () => {
+  loadFile1ViaFetch();
 
-    setTimeout(() => {
-      const moneyBtn = document.getElementById('toggleMoneyBtn');
-      if (!moneyBtn) {
-        console.warn('⚠️ toggleMoneyBtn が見つかりません。イベント登録をスキップします');
+  // ✅ file2ファイル選択イベント登録
+  const file2Input = document.getElementById('file2');
+  if (file2Input) {
+    file2Input.addEventListener('change', handleFile2Load);
+  } else {
+    console.warn('⚠️ file2 の input が見つかりません。');
+  }
+
+  // ✅ 金額トグルボタンの登録
+  const moneyBtn = document.getElementById('toggleMoneyBtn');
+  if (moneyBtn) {
+    let showOnlyPriced = false;
+
+    moneyBtn.addEventListener('click', () => {
+      const table = document.querySelector('#table2 table');
+      if (!table) {
+        console.warn('⚠️ table2 が未表示のため、トグルをスキップします');
         return;
       }
 
-      let showOnlyPriced = false;
+      const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+      const priceIndex = headers.indexOf('金額');
+      if (priceIndex === -1) {
+        console.warn('⚠️ 金額列が見つかりません');
+        return;
+      }
 
-      moneyBtn.addEventListener('click', () => {
-        const table = document.querySelector('#table2 table');
-        if (!table) {
-          console.warn('⚠️ table2 が未表示のため、トグルをスキップします');
-          return;
-        }
+      showOnlyPriced = !showOnlyPriced;
 
-        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-        const priceIndex = headers.indexOf('金額');
-        if (priceIndex === -1) {
-          console.warn('⚠️ 金額列が見つかりません');
-          return;
-        }
-
-        showOnlyPriced = !showOnlyPriced;
-
-        const rows = table.querySelectorAll('tr');
-        rows.forEach((tr, i) => {
-          if (i === 0) return;
-          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() || '';
-          const isNumeric = /^\d[\d,]*$/.test(text);
-          tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
-        });
-
-        moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+      const rows = table.querySelectorAll('tr');
+      rows.forEach((tr, i) => {
+        if (i === 0) return;
+        const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() || '';
+        const isNumeric = /^\d[\d,]*$/.test(text);
+        tr.style.display = (!showOnlyPriced || isNumeric) ? '' : 'none';
       });
-    }, 0); // 🔧 わずかな遅延で DOM 完全読込後に実行
-  });	  
+
+      moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+    });
+  } else {
+    console.warn('⚠️ toggleMoneyBtn が見つかりません。イベント登録をスキップします');
+  }
+});
+  
 
   function parseCSV(content) {
     return content
@@ -399,6 +406,58 @@ function createTableForFile1(data) {
 
 
   // ↓ このあと file1, file2 読み込み処理が続く
+
+    function handleFile2Load(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const rows = parseCSV(reader.result).filter(r => r.length > 0 && r[0]);
+
+    if (rows.length === 0) {
+      alert("⚠️ file2 に有効なデータ行がありません！");
+      return;
+    }
+
+    const header = rows[0];
+    const body = rows.slice(1).map(row => {
+      const name = row[0];
+      const currentUsage = row[1];
+      const currentUnit = row[2];
+      const fallback = masterData[name] || {};
+
+      row[1] = currentUsage || (fallback.usage != null ? fallback.usage : '');
+      row[2] = currentUnit || fallback.unit || '';
+
+      return row;
+    });
+
+    const table = createTable([header, ...body]);
+    const container = document.getElementById('table2');
+    container.innerHTML = '';
+    container.appendChild(table);
+    container.style.display = 'block';
+
+    document.getElementById('costPer10a').textContent = '—';
+
+    const toggleBtn = document.getElementById('toggleTable2');
+    if (toggleBtn) {
+      toggleBtn.style.display = 'inline-block';
+      toggleBtn.textContent = '▼ 表示しない';
+    }
+
+    const calcBtn = document.getElementById('calcFile2');
+    if (calcBtn) calcBtn.style.display = 'inline-block';
+
+    const moneyBtn = document.getElementById('toggleMoneyBtn');
+    if (moneyBtn) moneyBtn.style.display = 'inline-block';
+  };
+
+  reader.readAsText(file, 'Shift_JIS');
+}
+
 
     // 表の表示・非表示トグル
     document.getElementById('toggleTable1').addEventListener('click', function () {
