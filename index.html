@@ -112,10 +112,8 @@ button:hover {
   <!-- 🔷 file1：基本データ（資材価格） -->
   <section id="file1-area">
     <p>📄 基本データ（品名・容量・単位・予約価格）</p>
-    <!-- 🔽 file1は fetch 自動読み込みでもOK -->
-    <!-- <input type="file" id="file1" accept=".csv" /> -->
-    <button id="toggleTable1" style="display: none;">▼ 表示しない</button>
-    <div id="table1"></div>
+    <button id="toggleTable1" style="display: inline;">▼ 表示しない</button>
+    <div id="table1" style="display: block;"></div>
   </section>
 
   <hr />
@@ -125,23 +123,21 @@ button:hover {
     <p>📄 使用量データ（品目・使用量・単位・回数）</p>
 
     <div id="file2-controls" style="margin-bottom: 10px;">
-      <input type="file" id="file2" accept=".csv" style="display: block;" />
-      <button id="toggleTable2" style="display: none;">▼ 表を表示</button>
-      <button id="calcFile2" style="display: none;">🧮 計算する</button>
-      <button id="toggleMoneyBtn" style="display: none;">▶ 金額ありのみ表示</button>
+      <input type="file" id="file2" accept=".csv" />
+      <button id="toggleTable2" style="display: inline-block;">▼ 表示しない</button>
+      <button id="calcFile2" style="display: inline-block;">🧮 計算する</button>
+      <button id="toggleMoneyBtn" style="display: inline-block;">▶ 金額ありのみ表示</button>
     </div>
 
-    <!-- 🔷 金額合計表示 -->
     <div id="totalCost" style="margin-bottom: 10px;">
       10アールあたり変動費：
       <span id="costPer10a">—</span> 円
       <button id="copyCostBtn">📋 コピー</button>
     </div>
 
-    <!-- 🔷 file2の表 -->
-    <div id="table2" style="display: none;"></div>
+    <div id="table2" style="display: block;"></div>
   </section>
-  
+
   <script>
   let masterData = {}; // 品名 → { usage, unit }
   let priceData = {}; // 品名 → { price, volume, unit }
@@ -411,7 +407,7 @@ function createTableForFile1(data) {
 
   // ↓ このあと file1, file2 読み込み処理が続く
 
-    function handleFile2Load(e) {
+function handleFile2Load(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -443,6 +439,31 @@ function createTableForFile1(data) {
     container.innerHTML = '';
     container.appendChild(table);
     container.style.display = 'block';
+　　const toggleBtn = document.getElementById('toggleTable2');
+if (toggleBtn) {
+  toggleBtn.style.display = 'inline-block';
+  toggleBtn.textContent = '▼ 表示しない';
+
+  toggleBtn.replaceWith(toggleBtn.cloneNode(true));
+  const newToggleBtn = document.getElementById('toggleTable2');
+
+  newToggleBtn.style.display = 'inline-block';
+  newToggleBtn.textContent = '▼ 表示しない';
+
+  newToggleBtn.addEventListener('click', () => {
+    const table2 = document.getElementById('table2');
+    const calcBtn = document.getElementById('calcFile2');
+    if (!table2) return;
+
+    const isVisible = getComputedStyle(table2).display !== 'none';
+    table2.style.display = isVisible ? 'none' : 'block';
+    newToggleBtn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+
+    if (calcBtn) {
+      calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+    }
+  });
+}
 
     const costSpan = document.getElementById('costPer10a');
     if (costSpan) costSpan.textContent = '—';
