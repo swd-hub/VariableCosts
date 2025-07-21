@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -477,38 +477,49 @@ function handleFile2Load(e) {
     if (calcBtn) calcBtn.style.display = 'inline-block';
 
     // ✅ 金額トグルボタン表示＆イベント登録（安全処理）
-    const oldMoneyBtn = document.getElementById('toggleMoneyBtn');
-    if (oldMoneyBtn) {
-      const newMoneyBtn = oldMoneyBtn.cloneNode(true);
-      newMoneyBtn.id = 'toggleMoneyBtn';
-      oldMoneyBtn.replaceWith(newMoneyBtn);
-      newMoneyBtn.style.display = 'inline-block';
-      newMoneyBtn.textContent = '▶ 金額ありのみ表示';
+    // イベントリスナーが二重に登録されないように、既存のボタンをクローンして置き換える手法
+    // または、イベントリスナーを一度だけ登録するように制御する（今回は後者で対応）
+    const moneyBtn = document.getElementById('toggleMoneyBtn');
+    if (moneyBtn) {
+        moneyBtn.style.display = 'inline-block';
+        moneyBtn.textContent = '▶ 金額ありのみ表示'; // 初期テキスト設定
 
-      let showOnlyPriced = false;
+        // 既存のイベントリスナーがあれば削除（重複防止）
+        if (moneyBtn._eventListener) {
+            moneyBtn.removeEventListener('click', moneyBtn._eventListener);
+        }
 
-      newMoneyBtn.addEventListener('click', () => {
-        const tableEl = document.querySelector('#table2 table');
-        if (!tableEl) return;
+        let showOnlyPriced = false; // 各ファイル読み込み時にリセットされるようにスコープを調整
 
-        const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
-        const priceIndex = headers.indexOf('金額');
-        if (priceIndex === -1) return;
+        const moneyBtnClickHandler = () => {
+            const tableEl = document.querySelector('#table2 table');
+            if (!tableEl) return;
 
-        showOnlyPriced = !showOnlyPriced;
+            const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
+            const priceIndex = headers.indexOf('金額');
+            if (priceIndex === -1) return;
 
-        const rows = tableEl.querySelectorAll('tr');
-        rows.forEach((tr, i) => {
-          if (i === 0) return;
-          const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
-          const isValid = /^\d[\d,]*$/.test(text);
-          tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
-        });
+            showOnlyPriced = !showOnlyPriced;
 
-        newMoneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
-      });
+            const rows = tableEl.querySelectorAll('tr');
+            rows.forEach((tr, i) => {
+                if (i === 0) return; // ヘッダー行はスキップ
+                const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
+                
+                // ★ 修正: 数値に変換し、0より大きい場合のみ表示する
+                const numericValue = parseFloat(text.replace(/,/g, '')); // カンマを除去して数値に変換
+                const isDisplayable = numericValue > 0; // 数値が0より大きい場合のみ表示
+
+                tr.style.display = (!showOnlyPriced || isDisplayable) ? '' : 'none';
+            });
+
+            moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
+        };
+
+        moneyBtn.addEventListener('click', moneyBtnClickHandler);
+        moneyBtn._eventListener = moneyBtnClickHandler; // 参照を保存
     } else {
-      console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
+        console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
     }
   };
 
@@ -517,7 +528,7 @@ function handleFile2Load(e) {
 
 
 
-// 表示・非表示トグル
+// 表示・非表示トグル（file2のテーブル全体）
 document.getElementById('toggleTable2').addEventListener('click', function () {
   const tableDiv = document.getElementById('table2');
   const isVisible = tableDiv.style.display !== 'none';
@@ -563,18 +574,26 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
     const info = priceData[name];
     if (!info || isNaN(info.price) || isNaN(info.volume)) {
-      priceCell.textContent = '―';
+      priceCell.textContent = '―'; // 情報がない、または無効な場合はハイフン
       return;
     }
 
     if (unit !== info.unit) {
-      priceCell.textContent = '単位不一致';
+      priceCell.textContent = '単位不一致'; // 単位不一致の場合
       return;
     }
 
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
-    priceCell.textContent = (amount === 0 || isNaN(amount)) ? '―' : amount.toLocaleString();
+    
+    // ★ 修正: 金額が0の場合も0と表示するように変更
+    if (isNaN(amount)) {
+      priceCell.textContent = '―';
+    } else if (amount === 0) {
+      priceCell.textContent = '0'; // 0円の場合は「0」と表示
+    } else {
+      priceCell.textContent = amount.toLocaleString();
+    }
 
     if (count > 0 && !isNaN(amount)) {
       total += amount;
@@ -585,30 +604,8 @@ document.getElementById('calcFile2').addEventListener('click', function () {
   if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
 });
 
-let showOnlyPriced = false;
-
-document.getElementById('toggleMoneyBtn')?.addEventListener('click', () => {
-  const table = document.querySelector('#table2 table');
-  if (!table) return;
-
-  const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-  const priceIndex = headers.indexOf('金額');
-  if (priceIndex === -1) return;
-
-  showOnlyPriced = !showOnlyPriced;
-
-  const rows = table.querySelectorAll('tr');
-  rows.forEach((tr, i) => {
-    if (i === 0) return;
-    const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
-    const isValid = /^\d[\d,]*$/.test(text); // 数値チェック
-
-    tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
-  });
-
-  document.getElementById('toggleMoneyBtn').textContent =
-    showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
-});
+// `showOnlyPriced` 変数は `handleFile2Load` 内でスコープされており、
+// それぞれのファイル読み込み時に独立して動作するように調整しました。
 
 //変動費のコピー
 document.getElementById('copyCostBtn')?.addEventListener('click', () => {
@@ -631,11 +628,8 @@ document.getElementById('file2').addEventListener('change', function (e) {
   if (!file) return;
   file2OriginalName = file.name.replace(/\.csv$/i, ''); // 拡張子除去
 
-  const reader = new FileReader();
-  reader.onload = function () {
-    // &#9989; 既存の file2 処理はこの中でそのまま継続
-  };
-  reader.readAsText(file, 'Shift_JIS');
+  // ここで handleFile2Load を呼び出すので、既存の file2 処理はそちらに集約される
+  // reader.onload 処理は handleFile2Load 内に移動済み
 });
 
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
@@ -662,7 +656,7 @@ function saveTable2SelectedToCSV() {
   const rows = table.querySelectorAll('tr');
   rows.forEach((tr, i) => {
     if (i === 0) return;
-    if (tr.style.display === 'none') return;
+    if (tr.style.display === 'none') return; // 非表示の行は保存しない
 
     const cells = tr.querySelectorAll('td');
     const name = cells[idx.name]?.textContent.trim();
@@ -698,9 +692,6 @@ function saveTable2SelectedToCSV() {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 }
-
-
-
   </script>
 </body>
 </html>
