@@ -570,7 +570,7 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
-    priceCell.textContent = amount.toLocaleString();
+    priceCell.textContent = (amount === 0 || isNaN(amount)) ? '―' : amount.toLocaleString();
 
     // 合計集計（回数0除外・数値判定）
     if (count > 0 && !isNaN(amount)) {
