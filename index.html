@@ -528,10 +528,10 @@ document.getElementById('toggleTable2').addEventListener('click', function () {
   calcBtn.style.display = isVisible ? 'none' : 'inline-block';
 });
 
-document.getElementById('calcFile2').addEventListener('click', function () {
+document.getElementById('calcFile2').addEventListener('click', () => {
   const table = document.querySelector('#table2 table');
   if (!table) {
-    console.warn("⚠️ 表がまだ表示されていないため、計算をスキップします");
+    alert('計算対象の表がありません');
     return;
   }
 
@@ -541,20 +541,24 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     amountPer10a: headers.indexOf('１０アール量'),
     unit: headers.indexOf('単位'),
     count: headers.indexOf('回数'),
-    price: headers.indexOf('金額')
+    price: headers.indexOf('金額'),
   };
 
-  const rows = Array.from(table.querySelectorAll('tr')).slice(1); // データ行だけ
+  if (Object.values(idx).some(i => i === -1)) {
+    alert('必要な列が表に存在しません');
+    return;
+  }
+
   let total = 0;
+
+  const rows = Array.from(table.querySelectorAll('tr')).slice(1); // データ行のみ
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
-
-    const name = cells[idx.name]?.textContent?.trim();
-    const amountPer10a = parseFloat(cells[idx.amountPer10a]?.textContent || 0);
-    const unit = cells[idx.unit]?.textContent?.trim();
-    const count = parseFloat(cells[idx.count]?.querySelector('input')?.value || 0);
-
+    const name = cells[idx.name]?.textContent.trim();
+    const amountPer10a = parseFloat(cells[idx.amountPer10a]?.textContent || '0');
+    const unit = cells[idx.unit]?.textContent.trim();
+    const count = parseFloat(cells[idx.count]?.querySelector('input')?.value || '0');
     const priceCell = cells[idx.price];
 
     const info = priceData[name];
@@ -570,9 +574,9 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
+
     priceCell.textContent = (amount === 0 || isNaN(amount)) ? '―' : amount.toLocaleString();
 
-    // 合計集計（回数0除外・数値判定）
     if (count > 0 && !isNaN(amount)) {
       total += amount;
     }
@@ -580,7 +584,7 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
   const costSpan = document.getElementById('costPer10a');
   if (costSpan) {
-    costSpan.textContent = Math.round(total).toLocaleString(); // ← 小数なしも対応済み
+    costSpan.textContent = Math.round(total).toLocaleString();
   }
 });
 
