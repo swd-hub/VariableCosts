@@ -528,10 +528,10 @@ document.getElementById('toggleTable2').addEventListener('click', function () {
   calcBtn.style.display = isVisible ? 'none' : 'inline-block';
 });
 
-document.getElementById('calcFile2').addEventListener('click', () => {
+document.getElementById('calcFile2').addEventListener('click', function () {
   const table = document.querySelector('#table2 table');
   if (!table) {
-    alert('計算対象の表がありません');
+    alert('⚠️ 表がまだ表示されていません。');
     return;
   }
 
@@ -541,24 +541,22 @@ document.getElementById('calcFile2').addEventListener('click', () => {
     amountPer10a: headers.indexOf('１０アール量'),
     unit: headers.indexOf('単位'),
     count: headers.indexOf('回数'),
-    price: headers.indexOf('金額'),
+    price: headers.indexOf('金額')
   };
 
-  if (Object.values(idx).some(i => i === -1)) {
-    alert('必要な列が表に存在しません');
-    return;
-  }
-
+  const rows = Array.from(table.querySelectorAll('tr')).slice(1);
   let total = 0;
-
-  const rows = Array.from(table.querySelectorAll('tr')).slice(1); // データ行のみ
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
     const name = cells[idx.name]?.textContent.trim();
-    const amountPer10a = parseFloat(cells[idx.amountPer10a]?.textContent || '0');
+
+    // 「１０アール量」と「回数」はinputの値を取得
+    const amountInput = cells[idx.amountPer10a]?.querySelector('input');
+    const amountPer10a = parseFloat(amountInput?.value || 0);
     const unit = cells[idx.unit]?.textContent.trim();
-    const count = parseFloat(cells[idx.count]?.querySelector('input')?.value || '0');
+    const countInput = cells[idx.count]?.querySelector('input');
+    const count = parseFloat(countInput?.value || 0);
     const priceCell = cells[idx.price];
 
     const info = priceData[name];
@@ -574,7 +572,6 @@ document.getElementById('calcFile2').addEventListener('click', () => {
 
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
-
     priceCell.textContent = (amount === 0 || isNaN(amount)) ? '―' : amount.toLocaleString();
 
     if (count > 0 && !isNaN(amount)) {
@@ -583,9 +580,7 @@ document.getElementById('calcFile2').addEventListener('click', () => {
   });
 
   const costSpan = document.getElementById('costPer10a');
-  if (costSpan) {
-    costSpan.textContent = Math.round(total).toLocaleString();
-  }
+  if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
 });
 
 let showOnlyPriced = false;
