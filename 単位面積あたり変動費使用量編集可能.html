@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -443,7 +443,15 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
-    priceCell.textContent = (amount === 0 || isNaN(amount)) ? '―' : amount.toLocaleString();
+    
+    // 修正: 金額が0の場合も0と表示するように変更
+    if (isNaN(amount)) {
+      priceCell.textContent = '―';
+    } else if (amount === 0) {
+      priceCell.textContent = '0';
+    } else {
+      priceCell.textContent = amount.toLocaleString();
+    }
 
     if (count > 0 && !isNaN(amount)) {
       total += amount;
@@ -472,7 +480,10 @@ document.getElementById('toggleMoneyBtn')?.addEventListener('click', () => {
   rows.forEach((tr, i) => {
     if (i === 0) return;
     const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
-    const isValid = /^\d[\d,]*$/.test(text);
+    
+    // ★ ここを修正: 数値に変換して0より大きい場合のみ表示
+    const numericValue = parseFloat(text.replace(/,/g, ''));
+    const isValid = numericValue > 0; // 金額が0の場合やNaN（―、単位不一致）の場合はfalseになります
 
     tr.style.display = (!showOnlyPriced || isValid) ? '' : 'none';
   });
