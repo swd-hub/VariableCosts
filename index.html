@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
   <title>単位面積あたり変動費計算</title>
   <style>
 body {
@@ -620,35 +621,7 @@ document.getElementById('copyCostBtn')?.addEventListener('click', () => {
   }
 });
 
-// 💰 金額フィルターボタン機能
-document.querySelectorAll('#moneyFilter button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const table = document.querySelector('#table2 table');
-    if (!table) return;
 
-    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
-    const priceIndex = headers.indexOf('金額');
-    if (priceIndex === -1) return;
-
-    const mode = btn.dataset.filter;
-    const rows = table.querySelectorAll('tr');
-
-    rows.forEach((tr, i) => {
-      if (i === 0) return; // ヘッダーは常に表示
-
-      const cells = tr.querySelectorAll('td');
-      const text = cells[priceIndex]?.textContent.trim() ?? '';
-      const isNumeric = /^\d[\d,]*$/.test(text);
-      const isEmpty = text === '―' || text === '' || text === '—';
-
-      let show = true;
-      if (mode === 'has') show = isNumeric;
-      else if (mode === 'none') show = isEmpty;
-
-      tr.style.display = show ? '' : 'none';
-    });
-  });
-});
 
 //保存
 let file2OriginalName = ''; // ← ファイル名保持用（グローバル）
