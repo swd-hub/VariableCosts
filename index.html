@@ -127,6 +127,7 @@ button:hover {
       <button id="toggleTable2" style="display: inline-block;">▼ 表示しない</button>
       <button id="calcFile2" style="display: inline-block;">🧮 計算する</button>
       <button id="toggleMoneyBtn" style="display: inline-block;">▶ 金額ありのみ表示</button>
+      <button id="saveTable2CsvBtn">表を保存</button>
     </div>
 
     <div id="totalCost" style="margin-bottom: 10px;">
@@ -648,6 +649,82 @@ document.querySelectorAll('#moneyFilter button').forEach(btn => {
     });
   });
 });
+
+//保存
+let file2OriginalName = ''; // ← ファイル名保持用（グローバル）
+
+document.getElementById('file2').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  file2OriginalName = file.name.replace(/\.csv$/i, ''); // 拡張子除去
+
+  const reader = new FileReader();
+  reader.onload = function () {
+    // &#9989; 既存の file2 処理はこの中でそのまま継続
+  };
+  reader.readAsText(file, 'Shift_JIS');
+});
+
+document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
+
+function saveTable2SelectedToCSV() {
+  const table = document.querySelector('#table2 table');
+  if (!table) {
+    console.error('表が見つかりません');
+    return;
+  }
+
+  const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+  const idx = {
+    name: headers.indexOf('品名'),
+    amount: headers.indexOf('１０アール量'),
+    unit: headers.indexOf('単位'),
+    count: headers.indexOf('回数'),
+    remark: headers.indexOf('備考')
+  };
+
+  const selectedHeader = ['品名', '１０アール量', '単位', '回数', '備考'];
+  const csvRows = [selectedHeader];
+
+  const rows = table.querySelectorAll('tr');
+  rows.forEach((tr, i) => {
+    if (i === 0) return;
+    if (tr.style.display === 'none') return;
+
+    const cells = tr.querySelectorAll('td');
+    const name = cells[idx.name]?.textContent.trim();
+    const amount = cells[idx.amount]?.querySelector('input')?.value?.trim() ?? '';
+    const unit = cells[idx.unit]?.textContent.trim();
+    const count = cells[idx.count]?.querySelector('input')?.value?.trim() ?? '';
+    const remark = idx.remark !== -1 ? cells[idx.remark]?.textContent?.trim() ?? '' : '';
+
+    csvRows.push([name, amount, unit, count, remark]);
+  });
+
+  const csv = csvRows.map(row =>
+    row.map(cell => String(cell).replace(/,/g, '')).join(',')
+
+  ).join('\r\n');
+
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`;
+  const baseName = file2OriginalName || '表2';
+  const filename = `${baseName}_${timestamp}.csv`;
+
+  const sjisArray = Encoding.convert(Encoding.stringToCode(csv), {
+    to: 'SJIS',
+    from: 'UNICODE'
+  });
+  const blob = new Blob([new Uint8Array(sjisArray)], { type: 'text/csv' });
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
 
 
 
