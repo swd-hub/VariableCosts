@@ -146,8 +146,8 @@ button:hover {
   let priceData = {}; // 品名 → { price, volume, unit }
     
 window.addEventListener('DOMContentLoaded', () => {
-  // file1（資材価格）の読み込み
-  loadFile1ViaFetch(); // この関数は資材価格.csvを読み込むので残します
+  // file1（資材価格）の読み込み (fetch利用)
+  loadFile1ViaFetch(); 
 
   // file2ファイル選択イベント登録
   const file2Input = document.getElementById('file2');
@@ -185,7 +185,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-  // ★修正点1: parseCSVから末尾の空セルを削除するロジックを削除（再度）
+  // ★修正点1: parseCSVから末尾の空セルを削除するロジックを再度削除
   function parseCSV(content) {
     return content
       .trim()
@@ -546,7 +546,7 @@ function handleFile2Load(e) {
 }
 
 
-// document.getElementById('toggleTable2').addEventListener('click', function () { ... }); を削除
+// document.getElementById('toggleTable2').addEventListener('click', function () { ... }); は削除済み
 
 document.getElementById('calcFile2').addEventListener('click', function () {
   const table = document.querySelector('#table2 table');
