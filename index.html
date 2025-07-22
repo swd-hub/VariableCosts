@@ -128,7 +128,6 @@ button:hover {
       <button id="toggleTable2" style="display: none;">表を表示</button> <!-- 初期状態では非表示 -->
       <button id="calcFile2" style="display: none;">計算する</button>   <!-- 初期状態では非表示 -->
       <button id="toggleMoneyBtn" style="display: none;">金額ありのみ表示</button> <!-- 初期状態では非表示 -->
-      <!-- ★★★ 修正点1: 「表を保存」ボタンを初期状態で非表示にする ★★★ -->
       <button id="saveTable2CsvBtn" style="display: none;">表を保存</button>
     </div>
 
@@ -405,16 +404,16 @@ function handleFile2Load(e) {
   const toggleTable2Btn = document.getElementById('toggleTable2');
   const calcBtn = document.getElementById('calcFile2');
   const moneyBtn = document.getElementById('toggleMoneyBtn');
-  const saveBtn = document.getElementById('saveTable2CsvBtn'); // saveボタンの参照を取得
+  const saveBtn = document.getElementById('saveTable2CsvBtn');
 
   if (!file) {
-    // ★★★ 修正点2: ファイル選択がキャンセルされた場合、全ての関連ボタンを非表示にする ★★★
+    // ファイル選択がキャンセルされた場合、全ての関連ボタンを非表示にする
     if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
     if (calcBtn) calcBtn.style.display = 'none';
     if (moneyBtn) moneyBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = 'none'; // saveボタンも非表示
-    document.getElementById('table2').style.display = 'none'; // 表も非表示に
-    file2OriginalName = ''; // ファイル名をリセット
+    if (saveBtn) saveBtn.style.display = 'none';
+    document.getElementById('table2').style.display = 'none';
+    // file2OriginalName = ''; // これは saveTable2CsvBtn に関連するので、別途設定されるはず
     return;
   }
 
@@ -425,11 +424,11 @@ function handleFile2Load(e) {
 
     if (rows.length === 0) {
       alert("⚠️ file2 に有効なデータ行がありません！");
-      // ★★★ 修正点3: データがない場合、全ての関連ボタンを非表示にする ★★★
+      // データがない場合、全ての関連ボタンを非表示にする
       if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
       if (calcBtn) calcBtn.style.display = 'none';
       if (moneyBtn) moneyBtn.style.display = 'none';
-      if (saveBtn) saveBtn.style.display = 'none'; // saveボタンも非表示
+      if (saveBtn) saveBtn.style.display = 'none';
       document.getElementById('table2').style.display = 'none';
       return;
     }
@@ -458,10 +457,15 @@ function handleFile2Load(e) {
       toggleTable2Btn.style.display = 'inline-block';
       toggleTable2Btn.textContent = '▼ 表示しない';
 
-      if (!toggleTable2Btn.dataset.listenerAttached) {
-        toggleTable2Btn.dataset.listenerAttached = 'true';
+      // **ここが修正点:**
+      // handleFile2Loadが複数回呼ばれたときに、リスナーが重複してアタッチされるのを防ぎ、
+      // グローバルスコープの冗長なリスナーを削除したため、ここで確実にアタッチします。
+      // data-listenerAttachedは不要です。既存のリスナーを削除する方式に変更します。
+      if (toggleTable2Btn._eventListener) {
+          toggleTable2Btn.removeEventListener('click', toggleTable2Btn._eventListener);
+      }
 
-        toggleTable2Btn.addEventListener('click', () => {
+      const newToggleListener = () => {
           const table2 = document.getElementById('table2');
           const calcBtn = document.getElementById('calcFile2');
           if (!table2) return;
@@ -471,11 +475,13 @@ function handleFile2Load(e) {
           toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
           if (calcBtn) {
-            // 表が非表示になる場合、計算ボタンも非表示に
-            calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+              // 表が非表示になる場合、計算ボタンも非表示に
+              // 表が表示される場合、計算ボタンも表示に
+              calcBtn.style.display = isVisible ? 'none' : 'inline-block';
           }
-        });
-      }
+      };
+      toggleTable2Btn.addEventListener('click', newToggleListener);
+      toggleTable2Btn._eventListener = newToggleListener; // リスナー参照を保存
     }
 
     // ✅ 金額合計初期化
@@ -528,7 +534,7 @@ function handleFile2Load(e) {
         console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
     }
 
-    // ★★★ 修正点4: file2が読み込まれたら「表を保存」ボタンを表示する ★★★
+    // file2が読み込まれたら「表を保存」ボタンを表示する
     if (saveBtn) {
         saveBtn.style.display = 'inline-block';
     }
@@ -538,21 +544,10 @@ function handleFile2Load(e) {
 }
 
 
-
-// 表示・非表示トグル（file2のテーブル全体）
-document.getElementById('toggleTable2').addEventListener('click', function () {
-  const tableDiv = document.getElementById('table2');
-  const isVisible = tableDiv.style.display !== 'none';
-  tableDiv.style.display = isVisible ? 'none' : 'block';
-
-  this.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
-
-  // 計算ボタンも連動して表示切り替え
-  const calcBtn = document.getElementById('calcFile2');
-  if (calcBtn) { // calcBtnが存在することを確認
-      calcBtn.style.display = isVisible ? 'none' : 'inline-block';
-  }
-});
+// **ここが修正点:**
+// グローバルスコープにあった重複する toggleTable2 のイベントリスナーを削除しました。
+// handleFile2Load 内で一元的に管理されます。
+// document.getElementById('toggleTable2').addEventListener('click', function () { ... }); を削除
 
 document.getElementById('calcFile2').addEventListener('click', function () {
   const table = document.querySelector('#table2 table');
@@ -599,7 +594,7 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     const unitPrice = info.price / info.volume;
     const amount = unitPrice * amountPer10a * count;
     
-    // ★ 修正: 金額が0の場合も0と表示するように変更
+    // 金額が0の場合も0と表示するように変更
     if (isNaN(amount)) {
       priceCell.textContent = '―';
     } else if (amount === 0) {
