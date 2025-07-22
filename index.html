@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
+
   <title>単位面積あたり変動費計算</title>
   <style>
 body {
@@ -146,7 +147,7 @@ button:hover {
     
 window.addEventListener('DOMContentLoaded', () => {
   // file1（資材価格）の読み込み
-  loadFile1ViaFetch();
+  loadFile1ViaFetch(); // この関数は資材価格.csvを読み込むので残します
 
   // file2ファイル選択イベント登録
   const file2Input = document.getElementById('file2');
@@ -184,16 +185,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
+  // ★修正点1: parseCSVから末尾の空セルを削除するロジックを削除
   function parseCSV(content) {
     return content
       .trim()
       .split('\n')
-      .map(row => row.split(',').map(cell => cell.trim()))
-      .map(row => {
-        while (row[row.length - 1] === '') row.pop();
-        return row;
-      });
+      .map(row => row.split(',').map(cell => cell.trim()));
   }
     
 　function loadFile1ViaFetch() {
@@ -206,6 +203,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const rows = parseCSV(csvText); // 既存のCSVパーサー使用OK
 
       rows.slice(1).forEach(row => {
+        // CSVヘッダー: 費目,品名,容量,単位（こよみ表示）,予約参考価格（税込）,備考
         const name = (row[1] || '').trim();
         const volume = parseFloat((row[2] || '').replace(/,/g, ''));
         const unit   = (row[3] || '').trim();
@@ -334,12 +332,12 @@ function createTable(data) {
   return table;
 }
 
-
+// ★修正点2: createTableForFile1のループ条件をヘッダーの列数にする
 function createTableForFile1(data) {
   const table = document.createElement('table');
 
-  // 最大列数を算出
-  const maxCols = Math.max(...data.map(row => row.length));
+  // ヘッダーの列数を取得し、これを基準に列を生成する
+  const numHeaderCols = data[0].length;
 
   // 費目列のインデックスを取得（想定：先頭列が費目）
   const categoryIndex = 0;
@@ -350,7 +348,8 @@ function createTableForFile1(data) {
   data.forEach((row, rowIndex) => {
     const tr = document.createElement('tr');
 
-    for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+    // numHeaderCols を使用することで、ヘッダーの列数分のセルが必ず生成されます
+    for (let colIndex = 0; colIndex < numHeaderCols; colIndex++) {
       const tag = rowIndex === 0 ? 'th' : 'td';
       const td = document.createElement(tag);
       td.style.textAlign = 'right';
@@ -385,6 +384,7 @@ function createTableForFile1(data) {
 
         td.appendChild(select);
       } else {
+        // row[colIndex]がundefinedの場合でも ?? '' で空文字列が入るため、空のセルとして表示されます
         td.textContent = row[colIndex] ?? '';
       }
 
@@ -405,6 +405,7 @@ function handleFile2Load(e) {
   const calcBtn = document.getElementById('calcFile2');
   const moneyBtn = document.getElementById('toggleMoneyBtn');
   const saveBtn = document.getElementById('saveTable2CsvBtn');
+  const table2Div = document.getElementById('table2'); // 追加: table2Divの参照を取得
 
   if (!file) {
     // ファイル選択がキャンセルされた場合、全ての関連ボタンを非表示にする
@@ -412,10 +413,14 @@ function handleFile2Load(e) {
     if (calcBtn) calcBtn.style.display = 'none';
     if (moneyBtn) moneyBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'none';
-    document.getElementById('table2').style.display = 'none';
-    // file2OriginalName = ''; // これは saveTable2CsvBtn に関連するので、別途設定されるはず
+    if (table2Div) table2Div.style.display = 'none'; // table2Divも非表示にする
+    file2OriginalName = '';
     return;
   }
+
+  // ファイル名を取得して保存（saveTable2CsvBtnで利用）
+  file2OriginalName = file.name.replace(/\.csv$/i, '');
+
 
   const reader = new FileReader();
 
@@ -429,7 +434,7 @@ function handleFile2Load(e) {
       if (calcBtn) calcBtn.style.display = 'none';
       if (moneyBtn) moneyBtn.style.display = 'none';
       if (saveBtn) saveBtn.style.display = 'none';
-      document.getElementById('table2').style.display = 'none';
+      if (table2Div) table2Div.style.display = 'none'; // table2Divも非表示にする
       return;
     }
 
@@ -457,27 +462,24 @@ function handleFile2Load(e) {
       toggleTable2Btn.style.display = 'inline-block';
       toggleTable2Btn.textContent = '▼ 表示しない';
 
-      // **ここが修正点:**
-      // handleFile2Loadが複数回呼ばれたときに、リスナーが重複してアタッチされるのを防ぎ、
-      // グローバルスコープの冗長なリスナーを削除したため、ここで確実にアタッチします。
-      // data-listenerAttachedは不要です。既存のリスナーを削除する方式に変更します。
+      // ★修正点3: 既存のイベントリスナーがあれば削除（重複防止のため）
       if (toggleTable2Btn._eventListener) {
           toggleTable2Btn.removeEventListener('click', toggleTable2Btn._eventListener);
       }
 
       const newToggleListener = () => {
           const table2 = document.getElementById('table2');
-          const calcBtn = document.getElementById('calcFile2');
+          const calcBtnRef = document.getElementById('calcFile2'); // calcBtnの参照を再度取得
           if (!table2) return;
 
           const isVisible = getComputedStyle(table2).display !== 'none';
           table2.style.display = isVisible ? 'none' : 'block';
           toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
-          if (calcBtn) {
+          if (calcBtnRef) {
               // 表が非表示になる場合、計算ボタンも非表示に
               // 表が表示される場合、計算ボタンも表示に
-              calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+              calcBtnRef.style.display = isVisible ? 'none' : 'inline-block';
           }
       };
       toggleTable2Btn.addEventListener('click', newToggleListener);
@@ -544,9 +546,6 @@ function handleFile2Load(e) {
 }
 
 
-// **ここが修正点:**
-// グローバルスコープにあった重複する toggleTable2 のイベントリスナーを削除しました。
-// handleFile2Load 内で一元的に管理されます。
 // document.getElementById('toggleTable2').addEventListener('click', function () { ... }); を削除
 
 document.getElementById('calcFile2').addEventListener('click', function () {
@@ -674,8 +673,11 @@ function saveTable2SelectedToCSV() {
   });
 
   const csv = csvRows.map(row =>
-    row.map(cell => String(cell).replace(/,/g, '')).join(',')
-
+    row.map(cell => {
+      // CSV出力時にカンマを含む文字列をダブルクォーテーションで囲む処理を追加
+      const processedCell = String(cell).replace(/"/g, '""'); // 既存のダブルクォーテーションをエスケープ
+      return processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') ? `"${processedCell}"` : processedCell;
+    }).join(',')
   ).join('\r\n');
 
   const now = new Date();
