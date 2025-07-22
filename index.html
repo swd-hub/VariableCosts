@@ -185,12 +185,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-  // ★修正点1: parseCSVから末尾の空セルを削除するロジックを削除
+  // ★修正点1: parseCSVから末尾の空セルを削除するロジックを削除（再度）
   function parseCSV(content) {
     return content
       .trim()
       .split('\n')
-      .map(row => row.split(',').map(cell => cell.trim()));
+      .map(row => row.split(',').map(cell => cell.trim())); // `while (row[row.length - 1] === '') row.pop();` を削除
   }
     
 　function loadFile1ViaFetch() {
@@ -332,12 +332,12 @@ function createTable(data) {
   return table;
 }
 
-// ★修正点2: createTableForFile1のループ条件をヘッダーの列数にする
+// ★修正点2: createTableForFile1のループ条件をヘッダーの列数にする（再度）
 function createTableForFile1(data) {
   const table = document.createElement('table');
 
   // ヘッダーの列数を取得し、これを基準に列を生成する
-  const numHeaderCols = data[0].length;
+  const numHeaderCols = data[0].length; // `Math.max(...data.map(row => row.length))` ではなく、ヘッダーの列数を使用
 
   // 費目列のインデックスを取得（想定：先頭列が費目）
   const categoryIndex = 0;
@@ -462,7 +462,7 @@ function handleFile2Load(e) {
       toggleTable2Btn.style.display = 'inline-block';
       toggleTable2Btn.textContent = '▼ 表示しない';
 
-      // ★修正点3: 既存のイベントリスナーがあれば削除（重複防止のため）
+      // ★修正点3: 既存のイベントリスナーがあれば削除（重複防止のため）（再度）
       if (toggleTable2Btn._eventListener) {
           toggleTable2Btn.removeEventListener('click', toggleTable2Btn._eventListener);
       }
