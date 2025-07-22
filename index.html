@@ -125,10 +125,11 @@ button:hover {
 
     <div id="file2-controls" style="margin-bottom: 10px;">
       <input type="file" id="file2" accept=".csv" />
-      <button id="toggleTable2" style="display: inline-block;">▼ 表示しない</button>
-      <button id="calcFile2" style="display: inline-block;">🧮 計算する</button>
-      <button id="toggleMoneyBtn" style="display: inline-block;">▶ 金額ありのみ表示</button>
-      <button id="saveTable2CsvBtn">表を保存</button>
+      <button id="toggleTable2" style="display: none;">表を表示</button> <!-- 初期状態では非表示 -->
+      <button id="calcFile2" style="display: none;">計算する</button>   <!-- 初期状態では非表示 -->
+      <button id="toggleMoneyBtn" style="display: none;">金額ありのみ表示</button> <!-- 初期状態では非表示 -->
+      <!-- ★★★ 修正点1: 「表を保存」ボタンを初期状態で非表示にする ★★★ -->
+      <button id="saveTable2CsvBtn" style="display: none;">表を保存</button>
     </div>
 
     <div id="totalCost" style="margin-bottom: 10px;">
@@ -137,7 +138,7 @@ button:hover {
       <button id="copyCostBtn">📋 コピー</button>
     </div>
 
-    <div id="table2" style="display: block;"></div>
+    <div id="table2" style="display: none;"></div> <!-- 初期状態では非表示 -->
   </section>
 
   <script>
@@ -172,23 +173,12 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ toggleTable1 ボタンが見つかりません');
   }
 
-  // ✅ 表2 表示切替トグルボタン登録
+  // ✅ 表2 表示切替トグルボタン登録（ここでは初期状態を非表示にするため、コメントアウト）
+  // ただし、handleFile2Loadで表示されるので、ここではボタンの参照だけ取得
   const toggleTable2Btn = document.getElementById('toggleTable2');
   if (toggleTable2Btn) {
-    toggleTable2Btn.style.display = 'inline-block'; // 🔥 ← 同様に初期表示調整
-    toggleTable2Btn.addEventListener('click', () => {
-      const table2 = document.getElementById('table2');
-      const calcBtn = document.getElementById('calcFile2');
-      if (!table2) return;
-
-      const isVisible = getComputedStyle(table2).display !== 'none';
-      table2.style.display = isVisible ? 'none' : 'block';
-      toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
-
-      if (calcBtn) {
-        calcBtn.style.display = isVisible ? 'none' : 'inline-block';
-      }
-    });
+    // 初期状態はCSSで非表示になっているはずなので、ここでは特に操作しない
+    // handleFile2Load 内で表示とイベントリスナーの設定を行う
   } else {
     console.warn('⚠️ toggleTable2 ボタンが見つかりません');
   }
@@ -412,7 +402,21 @@ function createTableForFile1(data) {
 
 function handleFile2Load(e) {
   const file = e.target.files[0];
-  if (!file) return;
+  const toggleTable2Btn = document.getElementById('toggleTable2');
+  const calcBtn = document.getElementById('calcFile2');
+  const moneyBtn = document.getElementById('toggleMoneyBtn');
+  const saveBtn = document.getElementById('saveTable2CsvBtn'); // saveボタンの参照を取得
+
+  if (!file) {
+    // ★★★ 修正点2: ファイル選択がキャンセルされた場合、全ての関連ボタンを非表示にする ★★★
+    if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
+    if (calcBtn) calcBtn.style.display = 'none';
+    if (moneyBtn) moneyBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none'; // saveボタンも非表示
+    document.getElementById('table2').style.display = 'none'; // 表も非表示に
+    file2OriginalName = ''; // ファイル名をリセット
+    return;
+  }
 
   const reader = new FileReader();
 
@@ -421,6 +425,12 @@ function handleFile2Load(e) {
 
     if (rows.length === 0) {
       alert("⚠️ file2 に有効なデータ行がありません！");
+      // ★★★ 修正点3: データがない場合、全ての関連ボタンを非表示にする ★★★
+      if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
+      if (calcBtn) calcBtn.style.display = 'none';
+      if (moneyBtn) moneyBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'none'; // saveボタンも非表示
+      document.getElementById('table2').style.display = 'none';
       return;
     }
 
@@ -444,7 +454,6 @@ function handleFile2Load(e) {
     container.style.display = 'block';
 
     // ✅ 表2トグルボタン（toggleTable2）表示＆イベント登録
-    const toggleTable2Btn = document.getElementById('toggleTable2');
     if (toggleTable2Btn) {
       toggleTable2Btn.style.display = 'inline-block';
       toggleTable2Btn.textContent = '▼ 表示しない';
@@ -462,6 +471,7 @@ function handleFile2Load(e) {
           toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
           if (calcBtn) {
+            // 表が非表示になる場合、計算ボタンも非表示に
             calcBtn.style.display = isVisible ? 'none' : 'inline-block';
           }
         });
@@ -473,13 +483,9 @@ function handleFile2Load(e) {
     if (costSpan) costSpan.textContent = '—';
 
     // ✅ 計算ボタン表示
-    const calcBtn = document.getElementById('calcFile2');
     if (calcBtn) calcBtn.style.display = 'inline-block';
 
     // ✅ 金額トグルボタン表示＆イベント登録（安全処理）
-    // イベントリスナーが二重に登録されないように、既存のボタンをクローンして置き換える手法
-    // または、イベントリスナーを一度だけ登録するように制御する（今回は後者で対応）
-    const moneyBtn = document.getElementById('toggleMoneyBtn');
     if (moneyBtn) {
         moneyBtn.style.display = 'inline-block';
         moneyBtn.textContent = '▶ 金額ありのみ表示'; // 初期テキスト設定
@@ -521,6 +527,11 @@ function handleFile2Load(e) {
     } else {
         console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
     }
+
+    // ★★★ 修正点4: file2が読み込まれたら「表を保存」ボタンを表示する ★★★
+    if (saveBtn) {
+        saveBtn.style.display = 'inline-block';
+    }
   };
 
   reader.readAsText(file, 'Shift_JIS');
@@ -538,7 +549,9 @@ document.getElementById('toggleTable2').addEventListener('click', function () {
 
   // 計算ボタンも連動して表示切り替え
   const calcBtn = document.getElementById('calcFile2');
-  calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+  if (calcBtn) { // calcBtnが存在することを確認
+      calcBtn.style.display = isVisible ? 'none' : 'inline-block';
+  }
 });
 
 document.getElementById('calcFile2').addEventListener('click', function () {
@@ -623,14 +636,10 @@ document.getElementById('copyCostBtn')?.addEventListener('click', () => {
 //保存
 let file2OriginalName = ''; // ← ファイル名保持用（グローバル）
 
-document.getElementById('file2').addEventListener('change', function (e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  file2OriginalName = file.name.replace(/\.csv$/i, ''); // 拡張子除去
+// file2 の変更イベントリスナーは DOMContentLoaded 内で handleFile2Load に紐付け済み
+// そのため、ここでは特に何も記述しない。
+// file2OriginalName の設定も handleFile2Load 内で行われるため、重複を防ぐ。
 
-  // ここで handleFile2Load を呼び出すので、既存の file2 処理はそちらに集約される
-  // reader.onload 処理は handleFile2Load 内に移動済み
-});
 
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
 
@@ -638,6 +647,7 @@ function saveTable2SelectedToCSV() {
   const table = document.querySelector('#table2 table');
   if (!table) {
     console.error('表が見つかりません');
+    alert('エラー: 表が読み込まれていません。まずファイル2を読み込んでください。'); // ユーザーへのフィードバック
     return;
   }
 
