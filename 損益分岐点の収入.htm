@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>損益分岐点データ表（JSON対応）</title>
+<style>
+  table, th, td { border: 1px solid black; border-collapse: collapse; }
+  th, td { padding: 5px; text-align: center; min-width: 100px; }
+  input[type="number"], input[type="text"] {
+    width: 140px; /* ここを90pxから140pxに拡大 */
+  }
+  .summary-table td { text-align: left; }
+</style>
+</head>
+<body>
+
+<h2>作目別データ表</h2>
+
+<button onclick="addColumn()">列を追加</button>
+<button onclick="removeColumn()">列を削除</button>
+<input type="file" accept=".json" onchange="uploadJSON(event)">
+<button onclick="downloadJSON()">JSON保存</button>
+<br><br>
+
+<table id="cropTable">
+  <tr><th></th></tr>
+  <tr><th>作目</th></tr>
+  <tr><th>10アール収量 kg</th></tr>
+  <tr><th>kg単価 円</th></tr>
+  <tr><th>面積 アール</th></tr>
+  <tr><th>収入 円</th></tr>
+  <tr><th>変動費 円</th></tr>
+  <tr><th>その他変動費 円</th></tr>
+  <tr><th>変動費率</th></tr>
+</table>
+
+<br>
+
+<h2>損益分岐分析</h2>
+<table class="summary-table">
+  <tr>
+    <td>固定費 円</td>
+    <td><input type="number" id="fixedCost" value="0" oninput="recalculate()"></td>
+  </tr>
+  <tr>
+   <td>その他固定費 円</td>
+   <td><input type="number" id="otherFixedCost" value="0" oninput="recalculate()"></td>
+  </tr>
+  <tr>
+   <td>収入計 円</td>
+   <td colspan="2" id="totalIncome">0</td>
+  </tr>
+  <tr>
+   <td>変動費比率</td>
+   <td colspan="2" id="variableCostRate">0%</td>
+  </tr>
+  <tr>
+    <td>変動費計 円</td>
+    <td id="totalVariableCost">0</td>
+  </tr>
+  <tr>
+    <td>限界利益 円</td>
+    <td id="contributionMargin">0</td>
+  </tr>
+  <tr>
+    <td>限界利益率</td>
+    <td id="contributionMarginRate">0%</td>
+  </tr>
+  <tr>
+    <td>損益分岐点の収入 円</td>
+    <td id="breakEvenRevenue">0</td>
+  </tr>
+  <tr>
+  <td>収入計との差額 円</td>
+  <td colspan="2" id="diffIncomeBreakEven">0</td>
+</tr>
+</table>
+
+<script>
+let columnCount = 0;
+
+// 列追加
+function addColumn(data = []) {
+  columnCount++;
+  const table = document.getElementById("cropTable");
+  for (let i = 0; i < table.rows.length; i++) {
+    const cell = table.rows[i].insertCell(-1);
+    if (i === 0) {
+      cell.textContent = "作目" + columnCount;
+    } else if ([1, 2, 3, 4, 6, 7].includes(i)) {
+      const input = document.createElement("input");
+      input.type = (i === 1) ? "text" : "number";
+      // data配列のインデックスに注意
+      // data = [name, yield, price, area, cost, otherCost]
+      // 表の行: 1=名前,2=yield,3=price,4=area,6=cost,7=otherCost
+      // data[0]=name, [1]=yield, [2]=price, [3]=area, [4]=cost, [5]=otherCost
+      let value = "";
+      if (i === 1) value = data[0] !== undefined ? data[0] : "";
+      if (i === 2) value = data[1] !== undefined ? data[1] : "";
+      if (i === 3) value = data[2] !== undefined ? data[2] : "";
+      if (i === 4) value = data[3] !== undefined ? data[3] : "";
+      if (i === 6) value = data[4] !== undefined ? data[4] : "";
+      if (i === 7) value = data[5] !== undefined ? data[5] : "";
+      input.value = value;
+      input.oninput = recalculate;
+      cell.appendChild(input);
+    } else {
+      cell.textContent = "0";
+    }
+  }
+  recalculate();
+}
+
+// 列削除
+function removeColumn() {
+  if (columnCount === 0) return;
+  const table = document.getElementById("cropTable");
+  for (let i = 0; i < table.rows.length; i++) {
+    table.rows[i].deleteCell(-1);
+  }
+  columnCount--;
+  recalculate();
+}
+
+// 再計算
+function recalculate() {
+  const table = document.getElementById("cropTable");
+  let totalIncome = 0;
+  let totalVariable = 0;
+
+  for (let col = 1; col <= columnCount; col++) {
+    const yieldVal = parseFloat(getInputValue(table.rows[2].cells[col])) || 0;
+    const priceVal = parseFloat(getInputValue(table.rows[3].cells[col])) || 0;
+    const areaVal  = parseFloat(getInputValue(table.rows[4].cells[col])) || 0;
+    const cost1    = parseFloat(getInputValue(table.rows[6].cells[col])) || 0;
+    const cost2    = parseFloat(getInputValue(table.rows[7].cells[col])) || 0;
+
+    const income = Math.round(yieldVal * priceVal * areaVal / 10);
+    const totalCost = cost1 + cost2;
+    const rate = (income !== 0) ? (totalCost / income * 100).toFixed(2) : 0;
+
+    table.rows[5].cells[col].textContent = income;
+    table.rows[8].cells[col].textContent = rate + "%";
+
+    totalIncome += income;
+    totalVariable += totalCost;
+  }
+
+  // 固定費など取得
+  const fixedCost = parseFloat(document.getElementById("fixedCost").value) || 0;
+  const otherFixed = parseFloat(document.getElementById("otherFixedCost").value) || 0;
+
+  // 限界利益とその比率
+  const contributionMargin = totalIncome - totalVariable;
+  const contributionRate = (totalIncome !== 0) ? (contributionMargin / totalIncome * 100) : 0;
+
+  // 損益分岐点の収入（カッコ必須）
+  const breakEven = (contributionRate !== 0)
+    ? Math.round((fixedCost + otherFixed) / (contributionRate / 100))
+    : 0;
+
+  // 表に反映
+  document.getElementById("totalVariableCost").textContent = totalVariable;
+  document.getElementById("contributionMargin").textContent = contributionMargin;
+  document.getElementById("contributionMarginRate").textContent = contributionRate.toFixed(2) + "%";
+  document.getElementById("breakEvenRevenue").textContent = breakEven;
+
+  // 収入計・変動費比率・収入計との差額を表示
+  document.getElementById("totalIncome").textContent = totalIncome;
+  const variableRate = (totalIncome !== 0) ? (totalVariable / totalIncome * 100) : 0;
+  document.getElementById("variableCostRate").textContent = variableRate.toFixed(2) + "%";
+  const diff = totalIncome - breakEven;
+  document.getElementById("diffIncomeBreakEven").textContent = diff;
+
+}
+
+// 入力値取得
+function getInputValue(cell) {
+  const input = cell.querySelector("input");
+  return input ? input.value : "";
+}
+
+// 全列削除
+function removeAllColumns() {
+  while (columnCount > 0) removeColumn();
+}
+
+// JSON保存
+function downloadJSON() {
+  const data = { crops: [], fixedCost: 0, otherFixedCost: 0 };
+  const table = document.getElementById("cropTable");
+
+  for (let col = 1; col <= columnCount; col++) {
+    data.crops.push({
+      name: getInputValue(table.rows[1].cells[col]),
+      yield: parseFloat(getInputValue(table.rows[2].cells[col])) || 0,
+      price: parseFloat(getInputValue(table.rows[3].cells[col])) || 0,
+      area: parseFloat(getInputValue(table.rows[4].cells[col])) || 0,
+      cost: parseFloat(getInputValue(table.rows[6].cells[col])) || 0,
+      otherCost: parseFloat(getInputValue(table.rows[7].cells[col])) || 0
+    });
+  }
+
+  data.fixedCost = parseFloat(document.getElementById("fixedCost").value) || 0;
+  data.otherFixedCost = parseFloat(document.getElementById("otherFixedCost").value) || 0;
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+
+  const now = new Date();
+  const timestamp = now.getFullYear().toString()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0')
+    + String(now.getHours()).padStart(2, '0')
+    + String(now.getMinutes()).padStart(2, '0');
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `損益分岐データ${timestamp}.json`;
+  link.click();
+}
+
+// JSON読込
+function uploadJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      removeAllColumns();
+
+      if (Array.isArray(data.crops)) {
+        data.crops.forEach(crop => {
+          // 順番を完全に合わせる
+          // [name, yield, price, area, cost, otherCost]
+          addColumn([
+            crop.name !== undefined ? crop.name : "",
+            crop.yield !== undefined ? crop.yield : "",
+            crop.price !== undefined ? crop.price : "",
+            crop.area !== undefined ? crop.area : "",
+            crop.cost !== undefined ? crop.cost : "",
+            crop.otherCost !== undefined ? crop.otherCost : "",
+          ]);
+        });
+      }
+
+      document.getElementById("fixedCost").value = data.fixedCost || 0;
+      document.getElementById("otherFixedCost").value = data.otherFixedCost || 0;
+
+      recalculate();
+
+    } catch (error) {
+      alert("JSONの読み込みに失敗しました: " + error.message);
+      console.error(error);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+</script>
+
+</body>
+</html>
