@@ -60,12 +60,16 @@
     <td colspan="2" id="totalIncome">0</td>
   </tr>
   <tr>
-    <td>変動費比率</td>
-    <td colspan="2" id="variableCostRate">0%</td>
+  <td>収益 円</td>
+  <td colspan="2" id="profitTotal">0</td>
   </tr>
-  <tr>
+    <tr>
     <td>変動費計 円</td>
     <td id="totalVariableCost">0</td>
+  </tr>
+  <tr>
+    <td>変動費比率</td>
+    <td colspan="2" id="variableCostRate">0%</td>
   </tr>
   <tr>
     <td>限界利益 円</td>
@@ -84,6 +88,10 @@
     <td colspan="2" id="diffIncomeBreakEven">0</td>
   </tr>
 </table>
+
+<div style="width:320px; height:250px;">
+  <canvas id="profitBar" style="width:100%; height:100%"></canvas>
+</div>
 
 <script>
 let columnCount = 0;
@@ -154,6 +162,14 @@ function recalculate() {
   // 固定費など取得
   const fixedCost = parseFloat(document.getElementById("fixedCost").value) || 0;
   const otherFixed = parseFloat(document.getElementById("otherFixedCost").value) || 0;
+ 
+ // 「収益」計算
+  const totalCostAll = totalVariable + fixedCost + otherFixed;
+  const profit = totalIncome - totalCostAll;
+
+  // 表に反映
+  document.getElementById("profitTotal").textContent = formatNumber(profit);
+
 
   // 限界利益とその比率
   const contributionMargin = totalIncome - totalVariable;
@@ -192,6 +208,7 @@ function recalculate() {
 
   // --- グラフ描画 ---
   drawRateChart(labels, rates);
+  drawProfitBar(totalIncome, totalVariable, fixedCost + otherFixed);
 }
 
 // 入力値取得
@@ -303,6 +320,62 @@ function drawRateChart(labels, data) {
       maintainAspectRatio: false,
       scales: {
         y: { beginAtZero: true, title: { display: true, text: '%' } }
+      }
+    }
+  });
+}
+
+function drawProfitBar(totalIncome, totalVariable, totalFixed) {
+  const ctx = document.getElementById('profitBar').getContext('2d');
+  if (window.profitChartObj) window.profitChartObj.destroy();
+
+  window.profitChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['費用合計', '収入計'],
+      datasets: [
+        {
+          label: '固定費計',
+          data: [totalFixed, 0],
+          backgroundColor: 'rgba(255, 99, 132, 0.8)',
+          borderColor: 'rgba(255,255,255,1)',
+          borderWidth: 2,
+          stack: 'Stack 0'
+        },
+        {
+          label: '変動費計',
+          data: [totalVariable, 0],
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(255,255,255,1)',
+          borderWidth: 2,
+          stack: 'Stack 0'
+        },
+        {
+          label: '収入計',
+          data: [0, totalIncome],
+          backgroundColor: 'rgba(75, 192, 192, 0.8)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 2,
+          stack: 'Stack 1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        x: { 
+          stacked: true,
+          title: { display: true, text: "" }
+        },
+        y: { 
+          beginAtZero: true, 
+          stacked: true,   // ← ここを「true」に修正！
+          title: { display: true, text: "金額" }
+        }
       }
     }
   });
