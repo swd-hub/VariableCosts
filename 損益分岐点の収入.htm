@@ -144,7 +144,7 @@ function recalculate() {
     const totalCost = cost1 + cost2;
     const rate = (income !== 0) ? (totalCost / income * 100).toFixed(2) : 0;
 
-    table.rows[5].cells[col].textContent = income;
+    table.rows[5].cells[col].textContent = formatNumber(income); // カンマ付き
     table.rows[8].cells[col].textContent = rate + "%";
 
     totalIncome += income;
@@ -159,23 +159,27 @@ function recalculate() {
   const contributionMargin = totalIncome - totalVariable;
   const contributionRate = (totalIncome !== 0) ? (contributionMargin / totalIncome * 100) : 0;
 
+  // 変動費率
+  const variableRate = (totalIncome !== 0) ? (totalVariable / totalIncome * 100) : 0;
+
   // 損益分岐点の収入
   const breakEven = (contributionRate !== 0)
     ? Math.round((fixedCost + otherFixed) / (contributionRate / 100))
     : 0;
 
+  // 差額
+  const diff = totalIncome - breakEven;
+
   // 表に反映
-  document.getElementById("totalVariableCost").textContent = totalVariable;
-  document.getElementById("contributionMargin").textContent = contributionMargin;
+  document.getElementById("totalVariableCost").textContent = formatNumber(totalVariable);
+  document.getElementById("contributionMargin").textContent = formatNumber(contributionMargin);
   document.getElementById("contributionMarginRate").textContent = contributionRate.toFixed(2) + "%";
-  document.getElementById("breakEvenRevenue").textContent = breakEven;
+  document.getElementById("breakEvenRevenue").textContent = formatNumber(breakEven);
 
   // 収入計・変動費比率・収入計との差額を表示
-  document.getElementById("totalIncome").textContent = totalIncome;
-  const variableRate = (totalIncome !== 0) ? (totalVariable / totalIncome * 100) : 0;
+  document.getElementById("totalIncome").textContent = formatNumber(totalIncome);
   document.getElementById("variableCostRate").textContent = variableRate.toFixed(2) + "%";
-  const diff = totalIncome - breakEven;
-  document.getElementById("diffIncomeBreakEven").textContent = diff;
+  document.getElementById("diffIncomeBreakEven").textContent = formatNumber(diff);
 
   // --- グラフ用データ取得 ---
   const labels = [];
@@ -302,6 +306,13 @@ function drawRateChart(labels, data) {
       }
     }
   });
+}
+
+function formatNumber(val) {
+  // 数値ならカンマ区切り、そうでなければそのまま
+  if (typeof val === "number" && !isNaN(val)) return val.toLocaleString();
+  if (!isNaN(val) && val !== "" && val !== null) return Number(val).toLocaleString();
+  return val;
 }
 </script>
 
