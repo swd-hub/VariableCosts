@@ -5,7 +5,7 @@
   <title>損益分岐点データ表（JSON対応）</title>
 <style>
   body {
-    background: linear-gradient(135deg, #e3f0ff 0%, #b6d0f7 100%);
+    background: #ffffff; /* ← 背景を白に変更 */
     font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
     color: #183153;
     margin: 0;
@@ -13,36 +13,44 @@
     min-height: 100vh;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 2em 0;
-    background: #fff;
-    box-shadow: 0 2px 12px rgba(56,135,190,0.08);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-th, td {
-  width: 15%;         /* ← これで各列を25%ずつに */
-  min-width: 0;       /* ← 必要に応じて最小幅を無効化 */
-  border: 1px solid #b6d0f7;
-  padding: 3px 4px;    /* ←パディングもやや小さく */
-  text-align: center;
-  min-width: 25px;     /* ←ここを100px→25pxに変更 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2em 0;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(56,135,190,0.08);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-  th {
-    background: #d6eaff;
-    color: #176B87;
-    font-weight: bold;
-    letter-spacing: 0.06em;
-  }
+/* 共通のth, td */
+th, td {
+  min-width: 25px;
+  border: 1px solid #b6d0f7;
+  padding: 3px 4px;
+  text-align: center;
+}
 
-  tr:nth-child(even) {
-    background: #f2f8fd;
-  }
+/* 作目別データ表（各列30%）※残り10%はレイアウトで吸収 */
+.table-sakumoku th, .table-sakumoku td {
+  width: 30%;
+}
 
+/* 損益分岐分析（5列、各列20%） */
+.table-soneki th, .table-soneki td {
+  width: 20%;
+}
+
+th {
+  background: #d6eaff;
+  color: #176B87;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+}
+
+tr:nth-child(even) {
+  background: #f2f8fd;
+}
   input[type="number"], input[type="text"] {
     width: 140px;
     padding: 7px;
@@ -52,6 +60,7 @@ th, td {
     color: #183153;
     transition: border 0.2s;
   }
+
   input[type="number"]:focus, input[type="text"]:focus {
     border: 2px solid #176B87;
     outline: none;
@@ -73,10 +82,12 @@ th, td {
     transition: background 0.2s;
     margin-top: 1em;
   }
+
   button:hover, input[type="submit"]:hover {
     background: linear-gradient(90deg, #176B87 0%, #3887BE 100%);
   }
 </style>
+
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
