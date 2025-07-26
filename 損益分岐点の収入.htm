@@ -339,24 +339,30 @@ function drawProfitBar(totalIncome, totalVariable, totalFixed) {
           data: [totalFixed, 0],
           backgroundColor: 'rgba(255, 99, 132, 0.8)',
           borderColor: 'rgba(255,255,255,1)',
-          borderWidth: 2,
-          stack: 'Stack 0'
+          borderWidth: 5,
+          stack: 'Stack 0',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
         },
         {
           label: '変動費計',
           data: [totalVariable, 0],
           backgroundColor: 'rgba(54, 162, 235, 0.8)',
           borderColor: 'rgba(255,255,255,1)',
-          borderWidth: 2,
-          stack: 'Stack 0'
+          borderWidth: 5,
+          stack: 'Stack 0',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
         },
         {
           label: '収入計',
           data: [0, totalIncome],
           backgroundColor: 'rgba(75, 192, 192, 0.8)',
           borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 2,
-          stack: 'Stack 1'
+          borderWidth: 5,
+          stack: 'Stack 1',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
         }
       ]
     },
@@ -373,14 +379,13 @@ function drawProfitBar(totalIncome, totalVariable, totalFixed) {
         },
         y: { 
           beginAtZero: true, 
-          stacked: true,   // ← ここを「true」に修正！
+          stacked: true,
           title: { display: true, text: "金額" }
         }
       }
     }
   });
 }
-
 function formatNumber(val) {
   // 数値ならカンマ区切り、そうでなければそのまま
   if (typeof val === "number" && !isNaN(val)) return val.toLocaleString();
