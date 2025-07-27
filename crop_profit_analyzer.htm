@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>損益分岐点データ表（JSON対応）</title>
+<style>
+  body {
+    background: #ffffff; /* ← 背景を白に変更 */
+    font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
+    color: #183153;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+table {
+  width: auto;
+  max-width: 100%;
+}
+
+
+.table-sakumoku th, .table-sakumoku td,
+.table-soneki th, .table-soneki td {
+  width: auto;
+  white-space: nowrap;
+  padding: 2px 4px;
+}
+
+th, td {
+  min-width: 10px;
+  padding: 2px 3px;
+  font-size: 12px;
+}
+
+
+th {
+  background: #d6eaff;
+  color: #176B87;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+}
+
+tr:nth-child(even) {
+  background: #f2f8fd;
+}
+  input[type="number"], input[type="text"] {
+    width: 140px;
+    padding: 7px;
+    border: 1px solid #3887BE;
+    border-radius: 5px;
+    background: #f2f8fd;
+    color: #183153;
+    transition: border 0.2s;
+  }
+
+  input[type="number"]:focus, input[type="text"]:focus {
+    border: 2px solid #176B87;
+    outline: none;
+    background: #e3f0ff;
+  }
+
+  .summary-table td {
+    text-align: left;
+  }
+
+  button, input[type="submit"] {
+    background: linear-gradient(90deg, #3887BE 0%, #176B87 100%);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.7em 1.5em;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 1em;
+  }
+
+  button:hover, input[type="submit"]:hover {
+    background: linear-gradient(90deg, #176B87 0%, #3887BE 100%);
+  }
+</style>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<input type="file" accept=".json" onchange="uploadJSON(event)">
+<button onclick="downloadJSON()">データ保存</button>
+<br><br>
+<button onclick="addColumn()">列を追加</button>
+<button onclick="removeColumn()">列を削除</button>
+
+
+<br><br>
+
+<h2>作目別データ表</h2>
+<table id="cropTable">
+  <tr><th></th></tr>
+  <tr><th>作目</th></tr>
+  <tr><th>10アール収量 kg</th></tr>
+  <tr><th>kg単価 円</th></tr>
+  <tr><th>面積 アール</th></tr>
+  <tr><th>収入 円</th></tr>
+  <tr><th>変動費 円</th></tr>
+  <tr><th>その他変動費 円</th></tr>
+  <tr><th>変動費率</th></tr>
+</table>
+
+<br>
+
+<h2>作目ごとの変動費率</h2>
+<div style="width:25%; min-width:400px;">
+  <canvas id="rateChart" style="width:100%; height:250px;"></canvas>
+</div>
+<br>
+
+
+<h2>損益分岐分析</h2>
+<table class="summary-table">
+  <tr>
+    <td>固定費 円</td>
+    <td><input type="number" id="fixedCost" value="0" oninput="recalculate()"></td>
+  </tr>
+  <tr>
+    <td>その他固定費 円</td>
+    <td><input type="number" id="otherFixedCost" value="0" oninput="recalculate()"></td>
+  </tr>
+  <tr>
+    <td>収入計 円</td>
+    <td colspan="2" id="totalIncome">0</td>
+  </tr>
+  <tr>
+  <td>収益 円</td>
+  <td colspan="2" id="profitTotal">0</td>
+  </tr>
+    <tr>
+    <td>変動費計 円</td>
+    <td id="totalVariableCost">0</td>
+  </tr>
+  <tr>
+    <td>変動費比率</td>
+    <td colspan="2" id="variableCostRate">0%</td>
+  </tr>
+  <tr>
+    <td>限界利益 円</td>
+    <td id="contributionMargin">0</td>
+  </tr>
+  <tr>
+    <td>限界利益率</td>
+    <td id="contributionMarginRate">0%</td>
+  </tr>
+  <tr>
+    <td>損益分岐点の収入 円</td>
+    <td id="breakEvenRevenue">0</td>
+  </tr>
+  <tr>
+    <td>収入計との差額 円</td>
+    <td colspan="2" id="diffIncomeBreakEven">0</td>
+  </tr>
+</table>
+
+<br><br>
+<div style="width:320px; height:250px;">
+  <canvas id="profitBar" style="width:100%; height:100%"></canvas>
+</div>
+
+<script>
+let columnCount = 0;
+
+// 列追加
+function addColumn(data = []) {
+  columnCount++;
+  const table = document.getElementById("cropTable");
+  for (let i = 0; i < table.rows.length; i++) {
+    const cell = table.rows[i].insertCell(-1);
+    if (i === 0) {
+      cell.textContent = "作目" + columnCount;
+    } else if ([1, 2, 3, 4, 6, 7].includes(i)) {
+      const input = document.createElement("input");
+      input.type = (i === 1) ? "text" : "number";
+      let value = "";
+      if (i === 1) value = data[0] !== undefined ? data[0] : "";
+      if (i === 2) value = data[1] !== undefined ? data[1] : "";
+      if (i === 3) value = data[2] !== undefined ? data[2] : "";
+      if (i === 4) value = data[3] !== undefined ? data[3] : "";
+      if (i === 6) value = data[4] !== undefined ? data[4] : "";
+      if (i === 7) value = data[5] !== undefined ? data[5] : "";
+      input.value = value;
+      input.oninput = recalculate;
+      cell.appendChild(input);
+    } else {
+      cell.textContent = "0";
+    }
+  }
+  recalculate();
+}
+
+// 列削除
+function removeColumn() {
+  if (columnCount === 0) return;
+  const table = document.getElementById("cropTable");
+  for (let i = 0; i < table.rows.length; i++) {
+    table.rows[i].deleteCell(-1);
+  }
+  columnCount--;
+  recalculate();
+}
+
+// 再計算
+function recalculate() {
+  const table = document.getElementById("cropTable");
+  let totalIncome = 0;
+  let totalVariable = 0;
+
+  for (let col = 1; col <= columnCount; col++) {
+    const yieldVal = parseFloat(getInputValue(table.rows[2].cells[col])) || 0;
+    const priceVal = parseFloat(getInputValue(table.rows[3].cells[col])) || 0;
+    const areaVal  = parseFloat(getInputValue(table.rows[4].cells[col])) || 0;
+    const cost1    = parseFloat(getInputValue(table.rows[6].cells[col])) || 0;
+    const cost2    = parseFloat(getInputValue(table.rows[7].cells[col])) || 0;
+
+    const income = Math.round(yieldVal * priceVal * areaVal / 10);
+    const totalCost = cost1 + cost2;
+    const rate = (income !== 0) ? (totalCost / income * 100).toFixed(2) : 0;
+
+    table.rows[5].cells[col].textContent = formatNumber(income); // カンマ付き
+    table.rows[8].cells[col].textContent = rate + "%";
+
+    totalIncome += income;
+    totalVariable += totalCost;
+  }
+
+  // 固定費など取得
+  const fixedCost = parseFloat(document.getElementById("fixedCost").value) || 0;
+  const otherFixed = parseFloat(document.getElementById("otherFixedCost").value) || 0;
+ 
+ // 「収益」計算
+  const totalCostAll = totalVariable + fixedCost + otherFixed;
+  const profit = totalIncome - totalCostAll;
+
+  // 表に反映
+  document.getElementById("profitTotal").textContent = formatNumber(profit);
+
+
+  // 限界利益とその比率
+  const contributionMargin = totalIncome - totalVariable;
+  const contributionRate = (totalIncome !== 0) ? (contributionMargin / totalIncome * 100) : 0;
+
+  // 変動費率
+  const variableRate = (totalIncome !== 0) ? (totalVariable / totalIncome * 100) : 0;
+
+  // 損益分岐点の収入
+  const breakEven = (contributionRate !== 0)
+    ? Math.round((fixedCost + otherFixed) / (contributionRate / 100))
+    : 0;
+
+  // 差額
+  const diff = totalIncome - breakEven;
+
+  // 表に反映
+  document.getElementById("totalVariableCost").textContent = formatNumber(totalVariable);
+  document.getElementById("contributionMargin").textContent = formatNumber(contributionMargin);
+  document.getElementById("contributionMarginRate").textContent = contributionRate.toFixed(2) + "%";
+  document.getElementById("breakEvenRevenue").textContent = formatNumber(breakEven);
+
+  // 収入計・変動費比率・収入計との差額を表示
+  document.getElementById("totalIncome").textContent = formatNumber(totalIncome);
+  document.getElementById("variableCostRate").textContent = variableRate.toFixed(2) + "%";
+  document.getElementById("diffIncomeBreakEven").textContent = formatNumber(diff);
+
+  // --- グラフ用データ取得 ---
+  const labels = [];
+  const rates = [];
+  for (let col = 1; col <= columnCount; col++) {
+    labels.push(getInputValue(table.rows[1].cells[col]) || ("作目" + col));
+    let rateStr = table.rows[8].cells[col].textContent.replace("%", "");
+    rates.push(parseFloat(rateStr) || 0);
+  }
+
+  // --- グラフ描画 ---
+  drawRateChart(labels, rates);
+  drawProfitBar(totalIncome, totalVariable, fixedCost + otherFixed);
+}
+
+// 入力値取得
+function getInputValue(cell) {
+  const input = cell.querySelector("input");
+  return input ? input.value : "";
+}
+
+// 全列削除
+function removeAllColumns() {
+  while (columnCount > 0) removeColumn();
+}
+
+// JSON保存
+function downloadJSON() {
+  const data = { crops: [], fixedCost: 0, otherFixedCost: 0 };
+  const table = document.getElementById("cropTable");
+
+  for (let col = 1; col <= columnCount; col++) {
+    data.crops.push({
+      name: getInputValue(table.rows[1].cells[col]),
+      yield: parseFloat(getInputValue(table.rows[2].cells[col])) || 0,
+      price: parseFloat(getInputValue(table.rows[3].cells[col])) || 0,
+      area: parseFloat(getInputValue(table.rows[4].cells[col])) || 0,
+      cost: parseFloat(getInputValue(table.rows[6].cells[col])) || 0,
+      otherCost: parseFloat(getInputValue(table.rows[7].cells[col])) || 0
+    });
+  }
+
+  data.fixedCost = parseFloat(document.getElementById("fixedCost").value) || 0;
+  data.otherFixedCost = parseFloat(document.getElementById("otherFixedCost").value) || 0;
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+
+  const now = new Date();
+  const timestamp = now.getFullYear().toString()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0')
+    + String(now.getHours()).padStart(2, '0')
+    + String(now.getMinutes()).padStart(2, '0');
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `損益分岐データ${timestamp}.json`;
+  link.click();
+}
+
+// JSON読込
+function uploadJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      removeAllColumns();
+
+      if (Array.isArray(data.crops)) {
+        data.crops.forEach(crop => {
+          addColumn([
+            crop.name !== undefined ? crop.name : "",
+            crop.yield !== undefined ? crop.yield : "",
+            crop.price !== undefined ? crop.price : "",
+            crop.area !== undefined ? crop.area : "",
+            crop.cost !== undefined ? crop.cost : "",
+            crop.otherCost !== undefined ? crop.otherCost : "",
+          ]);
+        });
+      }
+
+      document.getElementById("fixedCost").value = data.fixedCost || 0;
+      document.getElementById("otherFixedCost").value = data.otherFixedCost || 0;
+
+      recalculate();
+
+    } catch (error) {
+      alert("JSONの読み込みに失敗しました: " + error.message);
+      console.error(error);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+// Chart.jsグローバル変数と描画関数
+let rateChartObj = null;
+function drawRateChart(labels, data) {
+  const ctx = document.getElementById('rateChart').getContext('2d');
+  if (rateChartObj) {
+    rateChartObj.data.labels = labels;
+    rateChartObj.data.datasets[0].data = data;
+    rateChartObj.update();
+    return;
+  }
+  rateChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '変動費率(%)',
+        data: data,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '%' } }
+      }
+    }
+  });
+}
+
+function drawProfitBar(totalIncome, totalVariable, totalFixed) {
+  const ctx = document.getElementById('profitBar').getContext('2d');
+  if (window.profitChartObj) window.profitChartObj.destroy();
+
+  window.profitChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['費用合計', '収入計'],
+      datasets: [
+        {
+          label: '固定費計',
+          data: [totalFixed, 0],
+          backgroundColor: 'rgba(255, 99, 132, 0.8)',
+          borderColor: 'rgba(255,255,255,1)',
+          borderWidth: 5,
+          stack: 'Stack 0',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
+        },
+        {
+          label: '変動費計',
+          data: [totalVariable, 0],
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(255,255,255,1)',
+          borderWidth: 5,
+          stack: 'Stack 0',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
+        },
+        {
+          label: '収入計',
+          data: [0, totalIncome],
+          backgroundColor: 'rgba(75, 192, 192, 0.8)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 5,
+          stack: 'Stack 1',
+          barPercentage: 1.0,         // ← ここに追加
+          categoryPercentage: 1.0     // ← ここに追加
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        x: { 
+          stacked: true,
+          title: { display: true, text: "" }
+        },
+        y: { 
+          beginAtZero: true, 
+          stacked: true,
+          title: { display: true, text: "金額" }
+        }
+      }
+    }
+  });
+}
+function formatNumber(val) {
+  // 数値ならカンマ区切り、そうでなければそのまま
+  if (typeof val === "number" && !isNaN(val)) return val.toLocaleString();
+  if (!isNaN(val) && val !== "" && val !== null) return Number(val).toLocaleString();
+  return val;
+}
+</script>
+
+</body>
+</html>
