@@ -14,32 +14,24 @@
   }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2em 0;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(56,135,190,0.08);
-  border-radius: 10px;
-  overflow: hidden;
+  width: auto;
+  max-width: 100%;
 }
 
-/* 共通のth, td */
-th, td {
-  min-width: 25px;
-  border: 1px solid #b6d0f7;
-  padding: 3px 4px;
-  text-align: center;
-}
 
-/* 作目別データ表（各列30%）※残り10%はレイアウトで吸収 */
-.table-sakumoku th, .table-sakumoku td {
-  width: 30%;
-}
-
-/* 損益分岐分析（5列、各列20%） */
+.table-sakumoku th, .table-sakumoku td,
 .table-soneki th, .table-soneki td {
-  width: 20%;
+  width: auto;
+  white-space: nowrap;
+  padding: 2px 4px;
 }
+
+th, td {
+  min-width: 10px;
+  padding: 2px 3px;
+  font-size: 12px;
+}
+
 
 th {
   background: #d6eaff;
