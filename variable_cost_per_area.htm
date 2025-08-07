@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
 
   <title>単位面積あたり変動費計算</title>
   <style>
@@ -142,47 +143,35 @@ window.addEventListener('DOMContentLoaded', () => {
       return response.arrayBuffer();
     })
     .then(buffer => {
+      // SJIS → Unicode に変換（Encoding.jsが必要）
       const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
         to: 'UNICODE',
         from: 'SJIS'
       });
       const text = Encoding.codeToString(unicodeArray);
 
-      // FileReaderの代わりに仮想イベントでhandleFile1Loadを呼び出す
-      const fakeEvent = {
-        target: {
-          files: [
-            new Blob([text], { type: 'text/csv' })
-          ]
-        }
-      };
-
-      // Blobを使って FileReader のように読み込ませる
+      // Fileオブジェクトを作成して仮想的に読み込みイベントを発火
+      const file = new File([text], '資材価格.csv', { type: 'text/csv' });
       const reader = new FileReader();
-      reader.onload = function () {
-        const fakeResult = {
-          target: {
-            files: [{
-              name: '資材価格.csv'
-            }]
-          }
-        };
 
-        // 本物のFileReaderの読み込み結果に見せかけてhandleFile1Loadを動かす
+      reader.onload = () => {
+        // handleFile1Load に読み込み結果を渡す
         handleFile1Load({
           target: {
-            files: [new File([reader.result], '資材価格.csv', { type: 'text/csv' })]
+            files: [file]
           }
         });
       };
 
-      reader.readAsText(new Blob([text], { type: 'text/csv' }), 'Shift_JIS');
+      // FileReaderでShift_JISとして読み込む（実際はUTF-16に変換済みなので安全）
+      reader.readAsText(file, 'Shift_JIS');
     })
     .catch(err => {
       console.error(err);
       alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
     });
 });
+
 
   
 function parseCSV(content) {
@@ -726,5 +715,6 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
 
 
