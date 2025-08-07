@@ -140,39 +140,32 @@ window.addEventListener('DOMContentLoaded', () => {
   fetch('資材価格.csv')
     .then(response => {
       if (!response.ok) throw new Error('CSVファイルの取得に失敗しました');
-      return response.arrayBuffer();
+      return response.arrayBuffer(); // バイナリデータとして取得
     })
     .then(buffer => {
       // SJIS → Unicode に変換（Encoding.jsが必要）
-      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
+      const uint8Array = new Uint8Array(buffer);
+      const unicodeArray = Encoding.convert(uint8Array, {
         to: 'UNICODE',
-        from: 'SJIS'
+        from: 'SJIS',
+        type: 'string'
       });
       const text = Encoding.codeToString(unicodeArray);
 
-      // Fileオブジェクトを作成して仮想的に読み込みイベントを発火
+      // FileReaderを使わず、直接handleFile1Loadに渡す
       const file = new File([text], '資材価格.csv', { type: 'text/csv' });
-      const reader = new FileReader();
 
-      reader.onload = () => {
-        // handleFile1Load に読み込み結果を渡す
-        handleFile1Load({
-          target: {
-            files: [file]
-          }
-        });
-      };
-
-      // FileReaderでShift_JISとして読み込む（実際はUTF-16に変換済みなので安全）
-      reader.readAsText(file, 'Shift_JIS');
+      handleFile1Load({
+        target: {
+          files: [file]
+        }
+      });
     })
     .catch(err => {
       console.error(err);
       alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
     });
 });
-
-
   
 function parseCSV(content) {
   return content
@@ -715,6 +708,7 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
 
 
 
