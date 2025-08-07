@@ -134,9 +134,9 @@ button:hover {
 let masterData = {};
 let priceData = {};
 
-// ✅ 自動で「資材価格.CSV」をfetchして file1 の代わりに読み込む
+// ✅ 自動で「資材価格.csv」をfetchして file1 の代わりに読み込む
 window.addEventListener('DOMContentLoaded', () => {
-  fetch('資材価格.CSV')
+  fetch('資材価格.csv')
     .then(response => {
       if (!response.ok) throw new Error('CSVファイルの取得に失敗しました');
       return response.arrayBuffer();
@@ -163,7 +163,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const fakeResult = {
           target: {
             files: [{
-              name: '資材価格.CSV'
+              name: '資材価格.csv'
             }]
           }
         };
@@ -171,7 +171,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // 本物のFileReaderの読み込み結果に見せかけてhandleFile1Loadを動かす
         handleFile1Load({
           target: {
-            files: [new File([reader.result], '資材価格.CSV', { type: 'text/csv' })]
+            files: [new File([reader.result], '資材価格.csv', { type: 'text/csv' })]
           }
         });
       };
@@ -180,7 +180,7 @@ window.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => {
       console.error(err);
-      alert('資材価格.CSV の読み込みに失敗しました。ファイルが存在するか確認してください。');
+      alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
     });
 });
 
@@ -726,4 +726,5 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
 
