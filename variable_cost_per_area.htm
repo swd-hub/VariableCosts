@@ -134,6 +134,57 @@ button:hover {
 let masterData = {};
 let priceData = {};
 
+// ✅ 自動で「資材価格.CSV」をfetchして file1 の代わりに読み込む
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('資材価格.CSV')
+    .then(response => {
+      if (!response.ok) throw new Error('CSVファイルの取得に失敗しました');
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
+        to: 'UNICODE',
+        from: 'SJIS'
+      });
+      const text = Encoding.codeToString(unicodeArray);
+
+      // FileReaderの代わりに仮想イベントでhandleFile1Loadを呼び出す
+      const fakeEvent = {
+        target: {
+          files: [
+            new Blob([text], { type: 'text/csv' })
+          ]
+        }
+      };
+
+      // Blobを使って FileReader のように読み込ませる
+      const reader = new FileReader();
+      reader.onload = function () {
+        const fakeResult = {
+          target: {
+            files: [{
+              name: '資材価格.CSV'
+            }]
+          }
+        };
+
+        // 本物のFileReaderの読み込み結果に見せかけてhandleFile1Loadを動かす
+        handleFile1Load({
+          target: {
+            files: [new File([reader.result], '資材価格.CSV', { type: 'text/csv' })]
+          }
+        });
+      };
+
+      reader.readAsText(new Blob([text], { type: 'text/csv' }), 'Shift_JIS');
+    })
+    .catch(err => {
+      console.error(err);
+      alert('資材価格.CSV の読み込みに失敗しました。ファイルが存在するか確認してください。');
+    });
+});
+
+  
 function parseCSV(content) {
   return content
     .trim()
@@ -675,3 +726,4 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
