@@ -348,28 +348,51 @@ function createTableForFile1(data) {
   return table;
 }
 
-// ✅ DOMContentLoaded で file1 のボタンと file2 のファイル選択イベントを登録
+// ✅ DOMContentLoaded: fetchで file1（資材価格CSV）を自動読み込み + file2 イベント登録
 window.addEventListener('DOMContentLoaded', () => {
-  // ✅ 表1 表示切替トグルボタン登録
-  const toggleTable1Btn = document.getElementById('toggleTable1');
-  const table1Div = document.getElementById('table1');
-  if (toggleTable1Btn && table1Div) {
-    toggleTable1Btn.addEventListener('click', () => {
-      const isVisible = getComputedStyle(table1Div).display !== 'none';
-      table1Div.style.display = isVisible ? 'none' : 'block';
-      toggleTable1Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
-    });
-  } else {
-    console.warn('⚠️ toggleTable1 ボタンまたは table1 div が見つかりません');
-  }
+  // ✅ fetchで shizai.csv を自動読み込み（Shift_JIS）
+  fetch('shizai.csv')
+    .then(response => {
+      if (!response.ok) throw new Error('CSVファイルの取得に失敗しました');
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
+        to: 'UNICODE',
+        from: 'SJIS'
+      });
+      const text = Encoding.codeToString(unicodeArray);
+      const rows = parseCSV(text);
 
-  // ✅ file1ファイル選択イベント登録
-  const file1Input = document.getElementById('file1');
-  if (file1Input) {
-    file1Input.addEventListener('change', handleFile1Load);
-  } else {
-    console.warn('⚠️ file1 の input が見つかりません。');
-  }
+      if (rows.length < 1) {
+        alert("資材価格ファイルに有効なデータがありません。");
+        return;
+      }
+
+      priceData = {};
+      rows.slice(1).forEach(row => {
+        const name = (row[1] || '').trim();
+        const volume = parseFloat((row[2] || '').replace(/,/g, ''));
+        const unit = (row[3] || '').trim();
+        const price = parseFloat((row[4] || '').replace(/,/g, ''));
+
+        if (name && !isNaN(price) && !isNaN(volume) && unit) {
+          priceData[name] = { price, volume, unit };
+        }
+      });
+
+      const tableDiv = document.getElementById('table1');
+      if (tableDiv) {
+        const table = createTableForFile1(rows);
+        tableDiv.innerHTML = '';
+        tableDiv.appendChild(table);
+        tableDiv.style.display = 'block';
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('資材価格ファイルの読み込みに失敗しました。');
+    });
 
   // ✅ file2ファイル選択イベント登録
   const file2Input = document.getElementById('file2');
@@ -721,4 +744,5 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
 
