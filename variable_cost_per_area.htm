@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
 
   <title>単位面積あたり変動費計算</title>
   <style>
@@ -140,32 +139,51 @@ window.addEventListener('DOMContentLoaded', () => {
   fetch('資材価格.csv')
     .then(response => {
       if (!response.ok) throw new Error('CSVファイルの取得に失敗しました');
-      return response.arrayBuffer(); // バイナリデータとして取得
+      return response.arrayBuffer();
     })
     .then(buffer => {
-      // SJIS → Unicode に変換（Encoding.jsが必要）
-      const uint8Array = new Uint8Array(buffer);
-      const unicodeArray = Encoding.convert(uint8Array, {
+      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
         to: 'UNICODE',
-        from: 'SJIS',
-        type: 'string'
+        from: 'SJIS'
       });
       const text = Encoding.codeToString(unicodeArray);
 
-      // FileReaderを使わず、直接handleFile1Loadに渡す
-      const file = new File([text], '資材価格.csv', { type: 'text/csv' });
-
-      handleFile1Load({
+      // FileReaderの代わりに仮想イベントでhandleFile1Loadを呼び出す
+      const fakeEvent = {
         target: {
-          files: [file]
+          files: [
+            new Blob([text], { type: 'text/csv' })
+          ]
         }
-      });
+      };
+
+      // Blobを使って FileReader のように読み込ませる
+      const reader = new FileReader();
+      reader.onload = function () {
+        const fakeResult = {
+          target: {
+            files: [{
+              name: '資材価格.csv'
+            }]
+          }
+        };
+
+        // 本物のFileReaderの読み込み結果に見せかけてhandleFile1Loadを動かす
+        handleFile1Load({
+          target: {
+            files: [new File([reader.result], '資材価格.csv', { type: 'text/csv' })]
+          }
+        });
+      };
+
+      reader.readAsText(new Blob([text], { type: 'text/csv' }), 'Shift_JIS');
     })
     .catch(err => {
       console.error(err);
       alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
     });
 });
+
   
 function parseCSV(content) {
   return content
@@ -708,7 +726,4 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
-
-
-
 
