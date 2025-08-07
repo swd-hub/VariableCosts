@@ -181,13 +181,13 @@ function createTable(data) {
         select.style.width = '100%';
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = '▼ 備考フィルター';
+        defaultOption.textContent = '▼ 備考フィルター'; // ユーザーが提供した「備考フィルター」のテキストに合わせました
         select.appendChild(defaultOption);
 
         remarkValues.forEach(value => {
           const option = document.createElement('option');
           option.value = value;
-          option.textContent = `▼ ${value}`;
+          option.textContent = `▼ ${value}`; // ユーザーが提供した「▼」プレフィックスに合わせました
           select.appendChild(option);
         });
 
@@ -255,7 +255,12 @@ function createTableForFile1(data) {
     for (let colIndex = 0; colIndex < maxCols; colIndex++) {
       const tag = rowIndex === 0 ? 'th' : 'td';
       const td = document.createElement(tag);
-      td.style.textAlign = 'right';
+      td.style.textAlign = 'right'; // デフォルトで右寄せ
+
+      // 費目列は左寄せにしたい場合はここで調整
+      // if (colIndex === categoryIndex) {
+      //   td.style.textAlign = 'left';
+      // }
 
       if (rowIndex === 0 && colIndex === categoryIndex) {
         const select = document.createElement('select');
@@ -263,13 +268,13 @@ function createTableForFile1(data) {
 
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = '▼ 費目フィルター';
+        defaultOption.textContent = '▼ 費目フィルター'; // ユーザーが提供した「▼」プレフィックスに合わせました
         select.appendChild(defaultOption);
 
         categoryValues.forEach(value => {
           const option = document.createElement('option');
           option.value = value;
-          option.textContent = `▼ ${value}`;
+          option.textContent = `▼ ${value}`; // ユーザーが提供した「▼」プレフィックスに合わせました
           select.appendChild(option);
         });
 
@@ -304,6 +309,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const toggleTable1Btn = document.getElementById('toggleTable1');
   const table1Div = document.getElementById('table1');
   if (toggleTable1Btn && table1Div) {
+    // 初期状態はCSSで非表示なので、ここでは特に操作しない
     toggleTable1Btn.addEventListener('click', () => {
       const isVisible = getComputedStyle(table1Div).display !== 'none';
       table1Div.style.display = isVisible ? 'none' : 'block';
@@ -574,8 +580,7 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     } else if (amount === 0) {
       priceCell.textContent = '0';
     } else {
-      // ✅ ここで金額を丸めてから表示する
-      priceCell.textContent = Math.round(amount).toLocaleString();
+      priceCell.textContent = amount.toLocaleString();
     }
 
     if (count > 0 && !isNaN(amount)) {
@@ -584,7 +589,6 @@ document.getElementById('calcFile2').addEventListener('click', function () {
   });
 
   const costSpan = document.getElementById('costPer10a');
-  // ✅ 合計金額も丸めて表示する
   if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
 });
 
