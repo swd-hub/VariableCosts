@@ -131,8 +131,9 @@ button:hover {
 <div id="table2" style="display: none;"></div>
 
 <script>
-let masterData = {};
+let masterData = {}; // 現在のコードでは未使用ですが、元のコードに合わせて残しています
 let priceData = {};
+let file2OriginalName = ''; // CSV保存時のファイル名に使用
 
 // ✅ 自動で「資材価格.csv」をfetchして file1 の代わりに読み込む
 window.addEventListener('DOMContentLoaded', () => {
@@ -142,45 +143,30 @@ window.addEventListener('DOMContentLoaded', () => {
       return response.arrayBuffer();
     })
     .then(buffer => {
+      // ここでSJISからUNICODE（UTF-8相当）に変換
       const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
         to: 'UNICODE',
         from: 'SJIS'
       });
       const text = Encoding.codeToString(unicodeArray);
 
-      // FileReaderの代わりに仮想イベントでhandleFile1Loadを呼び出す
-      const fakeEvent = {
-        target: {
-          files: [
-            new Blob([text], { type: 'text/csv' })
-          ]
-        }
-      };
-
-      // Blobを使って FileReader のように読み込ませる
-      const reader = new FileReader();
-      reader.onload = function () {
-        const fakeResult = {
-          target: {
-            files: [{
-              name: '資材価格.csv'
-            }]
-          }
-        };
-
-        // 本物のFileReaderの読み込み結果に見せかけてhandleFile1Loadを動かす
-        handleFile1Load({
-          target: {
-            files: [new File([reader.result], '資材価格.csv', { type: 'text/csv' })]
-          }
-        });
-      };
-
-      reader.readAsText(new Blob([text], { type: 'text/csv' }), 'Shift_JIS');
+      // ★修正: 変換されたテキストを直接handleFile1Loadに渡す
+      handleFile1Load(text);
     })
     .catch(err => {
       console.error(err);
       alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
+      // ファイル読み込みに失敗した場合、file1関連のUIを初期化する
+      const toggleBtn = document.getElementById('toggleTable1');
+      const tableDiv = document.getElementById('table1');
+      if (toggleBtn) {
+        toggleBtn.style.display = 'none';
+        toggleBtn.textContent = '表を表示'; // もし表示されていたら戻す
+      }
+      if (tableDiv) {
+        tableDiv.innerHTML = '';
+        tableDiv.style.display = 'none';
+      }
     });
 });
 
@@ -191,32 +177,46 @@ function parseCSV(content) {
     .split('\n')
     .map(row => row.split(',').map(cell => cell.trim()))
     .map(row => {
-      while (row[row.length - 1] === '') row.pop();
+      // 行末の空セルを削除（行によって列数が異なる場合への対応）
+      while (row.length > 0 && row[row.length - 1] === '') row.pop();
       return row;
-    });
+    })
+    .filter(row => row.length > 0); // 空行をフィルタリング
 }
 
 function createTable(data) {
   const table = document.createElement('table');
 
   const headerRow = data[0];
-  const calcColIndex = headerRow.indexOf('回数') + 1;
+  let calcColIndex = headerRow.indexOf('回数');
+  // '回数'列が見つからなければ、新しい'金額'列をヘッダーの最後に追加
+  if (calcColIndex === -1) {
+    headerRow.push('金額');
+    calcColIndex = headerRow.length - 1; // '金額'の新しいインデックス
+  } else {
+    calcColIndex += 1; // '回数'の次の列
+    headerRow.splice(calcColIndex, 0, '金額');
+  }
 
-  const newHeader = [...headerRow];
-  newHeader.splice(calcColIndex, 0, '金額');
+  const newHeader = [...headerRow]; // ヘッダー行をコピーして使用
 
   const newData = data.slice(1).map(row => {
     const newRow = [...row];
-    newRow.splice(calcColIndex, 0, '');
+    // ヘッダーと同様に、金額列を適切な位置に追加
+    if (newHeader.includes('金額')) { // ヘッダーに金額列が追加されたか確認
+      newRow.splice(calcColIndex, 0, '');
+    } else {
+      newRow.push(''); // '金額'列がなかった場合は最後に追加
+    }
     return newRow;
   });
 
   const finalData = [newHeader, ...newData];
 
   const remarkColIndex = newHeader.indexOf('備考');
-  const remarkValues = [...new Set(
+  const remarkValues = remarkColIndex !== -1 ? [...new Set(
     finalData.slice(1).map(row => row[remarkColIndex]).filter(v => v)
-  )].sort();
+  )].sort() : [];
 
   finalData.forEach((row, rowIndex) => {
     const tr = document.createElement('tr');
@@ -227,18 +227,18 @@ function createTable(data) {
       const td = document.createElement(tag);
       td.style.textAlign = 'right';
 
-      if (rowIndex === 0 && colIndex === remarkColIndex) {
+      if (rowIndex === 0 && colIndex === remarkColIndex && remarkColIndex !== -1) {
         const select = document.createElement('select');
         select.style.width = '100%';
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = '▼ 備考フィルター'; // ユーザーが提供した「備考フィルター」のテキストに合わせました
+        defaultOption.textContent = '▼ 備考フィルター';
         select.appendChild(defaultOption);
 
         remarkValues.forEach(value => {
           const option = document.createElement('option');
           option.value = value;
-          option.textContent = `▼ ${value}`; // ユーザーが提供した「▼」プレフィックスに合わせました
+          option.textContent = `▼ ${value}`;
           select.appendChild(option);
         });
 
@@ -297,8 +297,19 @@ function createTableForFile1(data) {
   const table = document.createElement('table');
 
   const maxCols = Math.max(...data.map(row => row.length));
-  const categoryIndex = 0;
-  const categoryValues = [...new Set(data.slice(1).map(row => row[categoryIndex]).filter(v => v))].sort();
+  
+  // ヘッダー行が存在することを確認し、費目列のインデックスを取得
+  let actualCategoryIndex = -1;
+  if (data.length > 0) {
+    const headerRow = data[0];
+    actualCategoryIndex = headerRow.indexOf('費目'); // ヘッダーに'費目'があるか確認
+    if (actualCategoryIndex === -1 && headerRow.length > 0) {
+        actualCategoryIndex = 0; // なければ最初の列をデフォルトとする
+    }
+  }
+
+  const categoryValues = actualCategoryIndex !== -1 ? [...new Set(data.slice(1).map(row => row[actualCategoryIndex]).filter(v => v))].sort() : [];
+
 
   data.forEach((row, rowIndex) => {
     const tr = document.createElement('tr');
@@ -306,26 +317,25 @@ function createTableForFile1(data) {
     for (let colIndex = 0; colIndex < maxCols; colIndex++) {
       const tag = rowIndex === 0 ? 'th' : 'td';
       const td = document.createElement(tag);
-      td.style.textAlign = 'right'; // デフォルトで右寄せ
+      td.style.textAlign = 'right';
 
-      // 費目列は左寄せにしたい場合はここで調整
-      // if (colIndex === categoryIndex) {
-      //   td.style.textAlign = 'left';
-      // }
+      if (colIndex === actualCategoryIndex) { // 費目列は左寄せ
+         td.style.textAlign = 'left';
+      }
 
-      if (rowIndex === 0 && colIndex === categoryIndex) {
+      if (rowIndex === 0 && colIndex === actualCategoryIndex && actualCategoryIndex !== -1) {
         const select = document.createElement('select');
         select.style.width = '100%';
 
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = '▼ 費目フィルター'; // ユーザーが提供した「▼」プレフィックスに合わせました
+        defaultOption.textContent = '▼ 費目フィルター';
         select.appendChild(defaultOption);
 
         categoryValues.forEach(value => {
           const option = document.createElement('option');
           option.value = value;
-          option.textContent = `▼ ${value}`; // ユーザーが提供した「▼」プレフィックスに合わせました
+          option.textContent = `▼ ${value}`;
           select.appendChild(option);
         });
 
@@ -334,7 +344,7 @@ function createTableForFile1(data) {
           const allRows = table.querySelectorAll('tr');
           allRows.forEach((r, i) => {
             if (i === 0) return;
-            const cell = r.querySelectorAll('td')[categoryIndex];
+            const cell = r.querySelectorAll('td')[actualCategoryIndex];
             const text = cell?.textContent?.trim() || '';
             r.style.display = keyword === '' || text === keyword ? '' : 'none';
           });
@@ -360,7 +370,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const toggleTable1Btn = document.getElementById('toggleTable1');
   const table1Div = document.getElementById('table1');
   if (toggleTable1Btn && table1Div) {
-    // 初期状態はCSSで非表示なので、ここでは特に操作しない
     toggleTable1Btn.addEventListener('click', () => {
       const isVisible = getComputedStyle(table1Div).display !== 'none';
       table1Div.style.display = isVisible ? 'none' : 'block';
@@ -387,62 +396,77 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function handleFile1Load(e) {
-  const file = e.target.files[0];
+
+// ★修正: handleFile1Load が文字列またはイベントオブジェクトを受け取るように変更
+function handleFile1Load(eOrText) {
+  let contentText = '';
   const toggleBtn = document.getElementById('toggleTable1');
   const tableDiv = document.getElementById('table1');
 
-  if (!file) {
-    // ファイル選択がキャンセルされた場合
+  if (typeof eOrText === 'string') {
+    // fetchから文字列が直接渡された場合（既にデコード済み）
+    contentText = eOrText;
+    // そのまま処理関数を呼び出す
+    processFile1Data(parseCSV(contentText), toggleBtn, tableDiv);
+  } else {
+    // input[type="file"]からイベントオブジェクトが渡された場合
+    const file = eOrText.target.files[0];
+
+    if (!file) {
+      if (toggleBtn) toggleBtn.style.display = 'none';
+      if (tableDiv) tableDiv.style.display = 'none';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      // FileReaderでSJISとして読み込む
+      const rows = parseCSV(reader.result);
+      processFile1Data(rows, toggleBtn, tableDiv);
+    };
+    reader.readAsText(file, 'Shift_JIS'); // ここでShift_JISとして読み込む
+  }
+}
+
+// ★追加: file1データの処理ロジックを分離
+function processFile1Data(rows, toggleBtn, tableDiv) {
+  // ヘッダー行が存在しない場合の考慮
+  if (rows.length < 1) {
+    alert("資材価格ファイルに有効なデータがありません。");
     if (toggleBtn) toggleBtn.style.display = 'none';
     if (tableDiv) tableDiv.style.display = 'none';
     return;
   }
 
-  const reader = new FileReader();
+  // priceDataのクリアと再構築
+  priceData = {}; // 既存のデータをクリア
 
-  reader.onload = function () {
-    const rows = parseCSV(reader.result);
+  // ヘッダー行をスキップしてデータ行を処理
+  rows.slice(1).forEach(row => {
+    // CSVヘッダー: 費目,品名,容量,単位（こよみ表示）,予約参考価格（税込）,備考
+    const name = (row[1] || '').trim();      // 品名
+    const volume = parseFloat((row[2] || '').replace(/,/g, '')); // 容量
+    const unit = (row[3] || '').trim();       // 単位
+    const price = parseFloat((row[4] || '').replace(/,/g, ''));  // 予約参考価格
 
-    // ヘッダー行が存在しない場合の考慮
-    if (rows.length < 1) {
-        alert("資材価格ファイルに有効なデータがありません。");
-        if (toggleBtn) toggleBtn.style.display = 'none';
-        if (tableDiv) tableDiv.style.display = 'none';
-        return;
+    if (name && !isNaN(price) && !isNaN(volume) && unit) {
+      priceData[name] = { price, volume, unit };
     }
+  });
 
-    // priceDataのクリアと再構築
-    priceData = {}; // 既存のデータをクリア
+  const table = createTableForFile1(rows);
+  if (tableDiv) {
+    tableDiv.innerHTML = '';
+    tableDiv.appendChild(table);
+    tableDiv.style.display = 'block';
+  }
 
-    // ヘッダー行をスキップしてデータ行を処理
-    rows.slice(1).forEach(row => {
-      // CSVヘッダー: 費目,品名,容量,単位（こよみ表示）,予約参考価格（税込）,備考
-      const name = (row[1] || '').trim();      // 品名
-      const volume = parseFloat((row[2] || '').replace(/,/g, '')); // 容量
-      const unit = (row[3] || '').trim();       // 単位
-      const price = parseFloat((row[4] || '').replace(/,/g, ''));  // 予約参考価格
-
-      if (name && !isNaN(price) && !isNaN(volume) && unit) {
-        priceData[name] = { price, volume, unit };
-      }
-    });
-
-    const table = createTableForFile1(rows);
-    if (tableDiv) {
-      tableDiv.innerHTML = '';
-      tableDiv.appendChild(table);
-      tableDiv.style.display = 'block';
-    }
-
-    if (toggleBtn) {
-      toggleBtn.style.display = 'inline';
-      toggleBtn.textContent = '▼ 表示しない';
-    }
-  };
-
-  reader.readAsText(file, 'Shift_JIS');
+  if (toggleBtn) {
+    toggleBtn.style.display = 'inline';
+    toggleBtn.textContent = '▼ 表示しない';
+  }
 }
+
 
 function handleFile2Load(e) {
   const file = e.target.files[0];
@@ -467,6 +491,8 @@ function handleFile2Load(e) {
   const reader = new FileReader();
 
   reader.onload = function () {
+    // handleFile2Loadはファイルinputからのみ呼び出されるため、
+    // ここでSJISとして読み込むのは正しい
     const rows = parseCSV(reader.result).filter(r => r.length > 0 && r[0]);
 
     if (rows.length === 0) {
@@ -481,15 +507,35 @@ function handleFile2Load(e) {
 
     const header = rows[0];
     const body = rows.slice(1).map(row => {
-      const name = row[0];
-      const currentUsage = row[1];
-      const currentUnit = row[2];
-      const fallback = masterData[name] || {};
+      // 品名列のインデックスを確認し、存在しない場合はスキップ
+      const nameIndex = header.indexOf('品名');
+      const name = nameIndex !== -1 ? row[nameIndex] : undefined;
 
-      row[1] = currentUsage || (fallback.usage != null ? fallback.usage : '');
-      row[2] = currentUnit || fallback.unit || '';
+      // １０アール量、単位のインデックスも確認
+      const currentUsageIndex = header.indexOf('１０アール量');
+      const currentUnitIndex = header.indexOf('単位');
 
-      return row;
+      // フォールバック処理のために行のコピーを作成
+      const newRow = [...row];
+
+      // masterData が現在使われていないので、関連するロジックはコメントアウト。
+      // もし masterData が別の用途で必要なら有効にする。
+      // let fallback = {};
+      // if (name && masterData[name]) {
+      //   fallback = masterData[name];
+      // }
+
+      // 元のCSV行のインデックスに直接値を設定するのではなく、新しい行のコピーに設定する
+      if (currentUsageIndex !== -1) {
+          newRow[currentUsageIndex] = (newRow[currentUsageIndex] || '').trim();
+          // newRow[currentUsageIndex] = newRow[currentUsageIndex] || (fallback.usage != null ? fallback.usage : '');
+      }
+      if (currentUnitIndex !== -1) {
+          newRow[currentUnitIndex] = (newRow[currentUnitIndex] || '').trim();
+          // newRow[currentUnitIndex] = newRow[currentUnitIndex] || fallback.unit || '';
+      }
+
+      return newRow;
     });
 
     const table = createTable([header, ...body]);
@@ -519,6 +565,8 @@ function handleFile2Load(e) {
           toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
 
           if (calcBtnRef) {
+              // テーブルが非表示になる場合は計算ボタンも非表示に
+              // テーブルが表示される場合は計算ボタンも表示に
               calcBtnRef.style.display = isVisible ? 'none' : 'inline-block';
           }
       };
@@ -550,14 +598,22 @@ function handleFile2Load(e) {
 
             const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
             const priceIndex = headers.indexOf('金額');
-            if (priceIndex === -1) return;
+            if (priceIndex === -1) {
+              console.warn('金額列が見つかりません。');
+              return;
+            }
 
             showOnlyPriced = !showOnlyPriced;
 
             const rows = tableEl.querySelectorAll('tr');
             rows.forEach((tr, i) => {
-                if (i === 0) return;
-                const text = tr.querySelectorAll('td')[priceIndex]?.textContent.trim() ?? '';
+                if (i === 0) return; // ヘッダー行はスキップ
+                const cell = tr.querySelectorAll('td')[priceIndex];
+                if (!cell) { // セルがない場合もスキップ
+                  tr.style.display = ''; // 隠さない
+                  return;
+                }
+                const text = cell.textContent.trim();
                 const numericValue = parseFloat(text.replace(/,/g, ''));
                 const isDisplayable = numericValue > 0;
 
@@ -598,6 +654,13 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     price: headers.indexOf('金額')
   };
 
+  // 必須列の存在チェック
+  if (idx.name === -1 || idx.amountPer10a === -1 || idx.unit === -1 || idx.count === -1 || idx.price === -1) {
+    alert('必要な列（品名, １０アール量, 単位, 回数, 金額）が表に見つかりません。CSVのヘッダーを確認してください。');
+    return;
+  }
+
+
   const rows = Array.from(table.querySelectorAll('tr')).slice(1);
   let total = 0;
 
@@ -606,19 +669,23 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     const name = cells[idx.name]?.textContent.trim();
 
     const amountInput = cells[idx.amountPer10a]?.querySelector('input');
-    const amountPer10a = parseFloat(amountInput?.value || 0);
+    // inputがない場合はtextContentを試みる
+    const amountPer10a = parseFloat(amountInput?.value || cells[idx.amountPer10a]?.textContent || 0);
+
     const unit = cells[idx.unit]?.textContent.trim();
     const countInput = cells[idx.count]?.querySelector('input');
-    const count = parseFloat(countInput?.value || 0);
+    // inputがない場合はtextContentを試みる
+    const count = parseFloat(countInput?.value || cells[idx.count]?.textContent || 0);
     const priceCell = cells[idx.price];
 
     const info = priceData[name];
     if (!info || isNaN(info.price) || isNaN(info.volume)) {
-      priceCell.textContent = '―';
+      priceCell.textContent = '―'; // 情報がないか不正な場合はハイフン
       return;
     }
 
-    if (unit !== info.unit) {
+    // 単位が設定されている場合のみ比較
+    if (unit && info.unit && unit !== info.unit) {
       priceCell.textContent = '単位不一致';
       return;
     }
@@ -631,10 +698,10 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     } else if (amount === 0) {
       priceCell.textContent = '0';
     } else {
-      priceCell.textContent = amount.toLocaleString();
+      priceCell.textContent = Math.round(amount).toLocaleString(); // 金額を丸めて表示
     }
 
-    if (count > 0 && !isNaN(amount)) {
+    if (count > 0 && !isNaN(amount)) { // countが0の行は合計に含めない
       total += amount;
     }
   });
@@ -654,8 +721,6 @@ document.getElementById('copyCostBtn')?.addEventListener('click', () => {
 });
 
 
-let file2OriginalName = '';
-
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
 
 function saveTable2SelectedToCSV() {
@@ -672,33 +737,44 @@ function saveTable2SelectedToCSV() {
     amount: headers.indexOf('１０アール量'),
     unit: headers.indexOf('単位'),
     count: headers.indexOf('回数'),
-    remark: headers.indexOf('備考')
+    remark: headers.indexOf('備考') // 備考列も追加
   };
 
-  const selectedHeader = ['品名', '１０アール量', '単位', '回数', '備考'];
+  // 保存するヘッダーを指定
+  const selectedHeader = ['品名', '１０アール量', '単位', '回数'];
+  if (idx.remark !== -1) { // 備考列が存在する場合のみ追加
+    selectedHeader.push('備考');
+  }
+
   const csvRows = [selectedHeader];
 
   const rows = table.querySelectorAll('tr');
   rows.forEach((tr, i) => {
-    if (i === 0) return;
-    if (tr.style.display === 'none') return;
+    if (i === 0) return; // ヘッダー行はスキップ
+    if (tr.style.display === 'none') return; // 非表示の行はスキップ
 
     const cells = tr.querySelectorAll('td');
-    const name = cells[idx.name]?.textContent.trim();
-    const amount = cells[idx.amount]?.querySelector('input')?.value?.trim() ?? '';
-    const unit = cells[idx.unit]?.textContent.trim();
-    const count = cells[idx.count]?.querySelector('input')?.value?.trim() ?? '';
-    // 備考列が存在しない場合も考慮する
-    const remark = idx.remark !== -1 ? cells[idx.remark]?.textContent?.trim() ?? '' : '';
+    const rowData = [];
 
-    csvRows.push([name, amount, unit, count, remark]);
+    // 各列のデータを取得
+    const name = cells[idx.name]?.textContent.trim();
+    const amount = cells[idx.amount]?.querySelector('input')?.value?.trim() ?? cells[idx.amount]?.textContent?.trim() ?? '';
+    const unit = cells[idx.unit]?.textContent.trim();
+    const count = cells[idx.count]?.querySelector('input')?.value?.trim() ?? cells[idx.count]?.textContent?.trim() ?? '';
+    const remark = (idx.remark !== -1 && cells[idx.remark]) ? cells[idx.remark]?.textContent?.trim() ?? '' : '';
+
+    rowData.push(name, amount, unit, count);
+    if (idx.remark !== -1) {
+        rowData.push(remark);
+    }
+    csvRows.push(rowData);
   });
 
   const csv = csvRows.map(row =>
     row.map(cell => {
-      // CSV出力時にカンマを含む文字列をダブルクォーテーションで囲む処理を追加
+      // CSV出力時にカンマ、改行、ダブルクォーテーション、空白を含む文字列をダブルクォーテーションで囲む処理
       const processedCell = String(cell).replace(/"/g, '""'); // 既存のダブルクォーテーションをエスケープ
-      return processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') ? `"${processedCell}"` : processedCell;
+      return (processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') || processedCell.includes(' ') || processedCell.includes('　')) ? `"${processedCell}"` : processedCell;
     }).join(',')
   ).join('\r\n');
 
@@ -707,11 +783,12 @@ function saveTable2SelectedToCSV() {
   const baseName = file2OriginalName || '表2';
   const filename = `${baseName}_${timestamp}.csv`;
 
+  // SJISに変換してBlobを作成
   const sjisArray = Encoding.convert(Encoding.stringToCode(csv), {
     to: 'SJIS',
     from: 'UNICODE'
   });
-  const blob = new Blob([new Uint8Array(sjisArray)], { type: 'text/csv' });
+  const blob = new Blob([new Uint8Array(sjisArray)], { type: 'text/csv;charset=Shift_JIS' }); // charsetも明示
 
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -726,4 +803,3 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
-
