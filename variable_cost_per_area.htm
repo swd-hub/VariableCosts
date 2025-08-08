@@ -6,20 +6,13 @@
 
   <title>単位面積あたり変動費計算</title>
   <style>
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
-
-  <title>単位面積あたり変動費計算</title>
-  <style>
 body {
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
   background-color: #f7f9fc;
   color: #333;
   padding: 30px;
   line-height: 1.6;
+  padding-top: 60px; /* #totalCost の高さに合わせる */
 }
 
 h1 {
@@ -106,11 +99,38 @@ button:hover {
   background-color: #005f8e;
 }
 
+/* 上部固定バー */
 #totalCost {
-  font-size: 1.1em;
-  margin-top: 15px;
-  color: #444;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #f7f9fc;
+  border-bottom: 2px solid #ccc;
+  padding: 10px;
+  z-index: 1000;
+  font-size: 1.2em;
+
+  display: flex;
+  align-items: center;
+  gap: 10px; /* ボタン間の間隔 */
 }
+
+#totalCost span {
+  flex-shrink: 0;
+}
+
+#totalCost button {
+  font-size: 0.9em;
+}
+
+#table2 table th {
+  position: sticky;
+  top: 60px; /* #totalCost バーの高さ分 */
+  background-color: #e3edf4;
+  z-index: 500;
+}
+
   </style>
 </head>
 <body>
@@ -126,15 +146,17 @@ button:hover {
 <div id="file2-controls">
   <input type="file" id="file2" accept=".csv" />
   <button id="toggleTable2" style="display: none;">表を表示</button>
-  <button id="calcFile2" style="display: none;">計算する</button>
+  <!-- ここから削除: <button id="calcFile2" style="display: none;">計算する</button> -->
   <button id="toggleMoneyBtn" style="display: none;">金額ありのみ表示</button>
   <button id="saveTable2CsvBtn" style="display: none;">表を保存</button>
 </div>
 
 <div id="totalCost">
-  10アールあたり変動費：<span id="costPer10a">―</span> 円
+  <span>10アールあたり変動費：<span id="costPer10a">―</span> 円</span>
   <button id="copyCostBtn">コピー</button>
+  <button id="calcFile2">計算する</button>
 </div>
+
 
 <div id="table2" style="display: none;"></div>
 
@@ -811,4 +833,5 @@ function saveTable2SelectedToCSV() {
   </script>
 </body>
 </html>
+
 
