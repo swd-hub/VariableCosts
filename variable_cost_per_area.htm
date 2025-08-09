@@ -722,7 +722,8 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     } else if (amount === 0) {
       priceCell.textContent = '0';
     } else {
-      priceCell.textContent = amount.toLocaleString();
+      priceCell.textContent = Math.round(amount).toLocaleString();
+
     }
 
     if (count > 0 && !isNaN(amount)) {
@@ -851,6 +852,7 @@ function getUnitConversionFactor(fromUnit, toUnit) {
   </script>
 </body>
 </html>
+
 
 
 
