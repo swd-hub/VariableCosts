@@ -685,13 +685,6 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     price: headers.indexOf('金額')
   };
 
-  // 必須列の存在チェック
-  if (idx.name === -1 || idx.amountPer10a === -1 || idx.unit === -1 || idx.count === -1 || idx.price === -1) {
-    alert('必要な列（品名, １０アール量, 単位, 回数, 金額）が表に見つかりません。CSVのヘッダーを確認してください。');
-    return;
-  }
-
-
   const rows = Array.from(table.querySelectorAll('tr')).slice(1);
   let total = 0;
 
@@ -700,39 +693,38 @@ document.getElementById('calcFile2').addEventListener('click', function () {
     const name = cells[idx.name]?.textContent.trim();
 
     const amountInput = cells[idx.amountPer10a]?.querySelector('input');
-    // inputがない場合はtextContentを試みる
-    const amountPer10a = parseFloat(amountInput?.value || cells[idx.amountPer10a]?.textContent || 0);
-
+    const amountPer10a = parseFloat(amountInput?.value || 0);
     const unit = cells[idx.unit]?.textContent.trim();
     const countInput = cells[idx.count]?.querySelector('input');
-    // inputがない場合はtextContentを試みる
-    const count = parseFloat(countInput?.value || cells[idx.count]?.textContent || 0);
+    const count = parseFloat(countInput?.value || 0);
     const priceCell = cells[idx.price];
 
     const info = priceData[name];
     if (!info || isNaN(info.price) || isNaN(info.volume)) {
-      priceCell.textContent = '―'; // 情報がないか不正な場合はハイフン
+      priceCell.textContent = '―';
       return;
     }
 
-    // 単位が設定されている場合のみ比較
-    if (unit && info.unit && unit !== info.unit) {
+    // 単位換算処理
+    const factor = getUnitConversionFactor(unit, info.unit);
+    if (factor === null) {
       priceCell.textContent = '単位不一致';
       return;
     }
 
+    const adjustedAmount = amountPer10a * factor;
     const unitPrice = info.price / info.volume;
-    const amount = unitPrice * amountPer10a * count;
-    
+    const amount = unitPrice * adjustedAmount * count;
+
     if (isNaN(amount)) {
       priceCell.textContent = '―';
     } else if (amount === 0) {
       priceCell.textContent = '0';
     } else {
-      priceCell.textContent = Math.round(amount).toLocaleString(); // 金額を丸めて表示
+      priceCell.textContent = amount.toLocaleString();
     }
 
-    if (count > 0 && !isNaN(amount)) { // countが0の行は合計に含めない
+    if (count > 0 && !isNaN(amount)) {
       total += amount;
     }
   });
@@ -740,17 +732,6 @@ document.getElementById('calcFile2').addEventListener('click', function () {
   const costSpan = document.getElementById('costPer10a');
   if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
 });
-
-document.getElementById('copyCostBtn')?.addEventListener('click', () => {
-  const raw = document.getElementById('costPer10a')?.textContent?.trim();
-  if (raw && raw !== '―') {
-    const numericValue = raw.replace(/,/g, '');
-    navigator.clipboard.writeText(numericValue)
-      .then(() => alert('変動費の数値のみをコピーしました！'))
-      .catch(() => alert('コピーに失敗しました'));
-  }
-});
-
 
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
 
@@ -830,10 +811,36 @@ function saveTable2SelectedToCSV() {
   URL.revokeObjectURL(link.href);
 }
 
+function normalizeUnit(unit) {
+  if (!unit) return '';
+  unit = unit.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+  return unit.toUpperCase().trim();
+}
+
+function getUnitConversionFactor(fromUnit, toUnit) {
+  var uFrom = normalizeUnit(fromUnit);
+  var uTo = normalizeUnit(toUnit);
+
+  if (uFrom === uTo) return 1;
+
+  var table = {
+    'L': { 'ML': 1000 },
+    'ML': { 'L': 1 / 1000 },
+    'KG': { 'G': 1000, 'T': 1 / 1000 },
+    'G': { 'KG': 1 / 1000, 'T': 1 / 1000000 },
+    'T': { 'KG': 1000, 'G': 1000000 }
+  };
+
+  return (table[uFrom] && table[uFrom][uTo]) ? table[uFrom][uTo] : null;
+}
+  
 
   </script>
 </body>
 </html>
+
 
 
 
