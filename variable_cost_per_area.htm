@@ -669,6 +669,7 @@ function handleFile2Load(e) {
 }
 
 
+
 document.getElementById('calcFile2').addEventListener('click', function () {
   const table = document.querySelector('#table2 table');
   if (!table) {
@@ -731,8 +732,18 @@ document.getElementById('calcFile2').addEventListener('click', function () {
 
   const costSpan = document.getElementById('costPer10a');
   if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
+});document.getElementById('copyCostBtn')?.addEventListener('click', () => {
+  const raw = document.getElementById('costPer10a')?.textContent?.trim();
+  if (raw && raw !== '―') {
+    const numericValue = raw.replace(/,/g, '');
+    navigator.clipboard.writeText(numericValue)
+      .then(() => alert('変動費の数値のみをコピーしました！'))
+      .catch(() => alert('コピーに失敗しました'));
+  }
 });
 
+let file2OriginalName = '';
+  
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
 
 function saveTable2SelectedToCSV() {
@@ -840,6 +851,7 @@ function getUnitConversionFactor(fromUnit, toUnit) {
   </script>
 </body>
 </html>
+
 
 
 
