@@ -20,6 +20,7 @@ h1 {
   color: #006c9c;
   margin-bottom: 0px;
   padding-bottom: 0px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* タイトルに奥行き */
 }
 
 table {
@@ -40,10 +41,12 @@ th, td {
 }
 
 th {
-  background-color: #e3edf4;
+  background: linear-gradient(to bottom, #e3edf4, #d6e2eb);
   font-weight: bold;
   border-bottom: 2px solid #ccc;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05); /* 内側の影で立体感 */
 }
+
 
 th select {
   width: 100%;
@@ -68,24 +71,16 @@ tr:hover td {
   background-color: #f4f8fc;
 }
 
-input[type="number"] {
-  width: 70px;
+input[type="number"], input[type="text"] {
   padding: 4px;
   border: 1px solid #ccc;
   border-radius: 4px;
   text-align: right;
-}
-input[type="text"]::placeholder {
-  color: #999;
-}
-input[type="text"] {
-  padding: 4px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05); /* 内側影で奥行き */
 }
 
 button {
-  background-color: #007bb5;
+  background: linear-gradient(to bottom, #0095d9, #007bb5);
   color: #fff;
   border: none;
   padding: 8px 14px;
@@ -93,11 +88,14 @@ button {
   font-size: 0.9em;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
 }
 
 button:hover {
-  background-color: #005f8e;
+  background: linear-gradient(to bottom, #00a7f0, #005f8e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
 }
 
 /* 上部固定バー */
@@ -106,15 +104,15 @@ button:hover {
   top: 0;
   left: 0;
   right: 0;
-  background-color: #f7f9fc;
+  background: linear-gradient(to bottom, #f7f9fc, #e3edf4);
   border-bottom: 2px solid #ccc;
   padding: 10px;
   z-index: 1000;
   font-size: 1.2em;
-
   display: flex;
   align-items: center;
-  gap: 10px; /* ボタン間の間隔 */
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* 固定バーも浮かせる */
 }
 
 #totalCost span {
@@ -131,6 +129,7 @@ button:hover {
   background-color: #e3edf4;
   z-index: 500;
 }
+
 
   </style>
 </head>
@@ -851,6 +850,7 @@ function getUnitConversionFactor(fromUnit, toUnit) {
   </script>
 </body>
 </html>
+
 
 
 
