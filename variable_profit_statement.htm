@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>変動損益計算書</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f6f8;
+    color: #333;
+    margin: 30px;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+  }
+  table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 40px;
+    background-color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  caption {
+    text-align: left;
+    font-weight: bold;
+    font-size: 22px;
+    padding: 12px 16px;
+    background-color: #3498db;
+    color: white;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: right;
+    font-size: 20px;
+  }
+  th:first-child, td:first-child {
+    background-color: #f0f3f5;
+    text-align: left;
+    font-weight: 600;
+    width: 200px;
+  }
+  thead th {
+    background-color: #ecf0f1;
+    font-weight: 600;
+    text-align: center;
+  }
+  tbody tr:hover {
+    background-color: #f9fcff;
+  }
+  input[type="number"], input[type="text"] {
+    width: 100px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 20px;
+    text-align: right;
+  }
+  #control {
+    margin-bottom: 20px;
+  }
+  #control button {
+    padding: 6px 12px;
+    font-size: 14px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+    margin-right: 10px;
+  }
+  #control button:hover {
+    background-color: #2980b9;
+  }
+  #fixedTotal {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .summary-table {
+  width: 100%;         /* 左寄せでコンパクトに */
+  margin-left: 0;
+  margin-bottom: 40px;
+}
+.summary-table td, 
+.summary-table th {
+  text-align: left;     /* 数値も左寄せ */
+}
+.summary-table input {
+  text-align: right;    /* 入力は右寄せでもOKなら残す */
+}
+
+</style>
+</head>
+<body>
+
+<h1>変動損益計算書</h1>
+
+<div id="control">
+  <button onclick="addCrop()">作目を追加</button>
+  <button onclick="downloadCSV()">CSV保存</button>
+  <input type="file" accept=".csv" onchange="uploadCSV(event)">
+</div>
+
+<!-- 作目別収入 -->
+<table id="cropTable">
+  <caption>作目別収入</caption>
+  <thead>
+    <tr id="cropHeader">
+      <th>作目</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th>10a収量(kg)</th></tr>
+    <tr><th>kg単価（円）</th></tr>
+    <tr><th>10a販売額（円）</th></tr>
+    <tr><th>10aその他収入（円）</th></tr>
+    <tr><th>10a収入計</th></tr>
+  </tbody>
+</table>
+
+<!-- 変動費・限界利益 -->
+<table id="costTable">
+  <caption>10aあたり変動費、限界利益</caption>
+  <tbody>
+    <tr><th>10a資材費（円）</th></tr>
+    <tr><th>10a作業委託費（円）</th></tr>
+    <tr><th>10aその他変動費（円）</th></tr>
+    <tr><th>10a変動費計（円）</th></tr>
+    <tr><th>10a限界利益（円）</th></tr>
+    <tr><th>限界利益率</th></tr>
+  </tbody>
+</table>
+
+<!-- 経営全体合計 -->
+<table class="summary-table">
+  <caption>経営全体合計</caption>
+  <tr id="totalRow">
+    <th>面積（a）</th>
+    <td><input type="number" id="areaInput" value="" oninput="calculateFixedTotal()"></td>
+  </tr>
+  <tr><th>収入①</th><td></td></tr>
+  <tr><th>変動費計（円）</th><td></td></tr>
+  <tr><th>限界利益（円）</th><td></td></tr>
+  <tr><th>限界利益率(再掲)</th><td></td></tr>
+</table>
+
+<!-- 固定費 -->
+<table class="summary-table">
+  <caption>固定費</caption>
+  <tr><th>人件費（円）</th><td><input type="number" id="laborCost" value="" oninput="calculateFixedTotal()"></td></tr>
+  <tr><th>減価償却費（円）</th><td><input type="number" id="depreciation" value="" oninput="calculateFixedTotal()"></td></tr>
+  <tr><th>支払地代（円）</th><td><input type="number" id="landRent" value="" oninput="calculateFixedTotal()"></td></tr>
+  <tr><th>その他固定費（円）</th><td><input type="number" id="otherFixed" value="" oninput="calculateFixedTotal()"></td></tr>
+  <tr><th>固定費計（円）</th><td id="fixedTotal">–</td></tr>
+</table>
+
+<!-- 利益・損益分岐点 -->
+<table class="summary-table">
+  <caption>利益、損益分岐点</caption>
+  <tr><td>利益（円）</td><td></td></tr>
+  <tr><td>損益分岐点の収入</td><td></td></tr>
+</table>
+
+
+<script>
+let cropCount = 0;
+
+function initCrops() {
+  for (let i = 0; i < 5; i++) {
+    addCrop();
+  }
+}
+window.onload = initCrops;
+
+function addCrop() {
+  cropCount++;
+  const cropName = `作目${cropCount}`;
+  const cropHeader = document.getElementById("cropHeader");
+  const cropTh = document.createElement("th");
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.value = cropName;
+  nameInput.placeholder = "作目名";
+  nameInput.style.width = "150px";
+  cropTh.appendChild(nameInput);
+  cropHeader.appendChild(cropTh);
+  const colIndex = cropTh.cellIndex;
+
+  const cropRows = document.querySelectorAll("#cropTable tbody tr");
+  cropRows.forEach((row, i) => {
+    const td = document.createElement("td");
+    if (i === 2 || i === 4) {
+      td.textContent = "–";
+    } else {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.value = "";
+      input.oninput = () => calculateCrop(colIndex);
+      td.appendChild(input);
+    }
+    row.appendChild(td);
+  });
+
+  const costRows = document.querySelectorAll("#costTable tbody tr");
+  costRows.forEach((row, i) => {
+    const td = document.createElement("td");
+    if (i >= 3) {
+      td.textContent = "–";
+    } else {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.value = "";
+      input.oninput = () => calculateCrop(colIndex);
+      td.appendChild(input);
+    }
+    row.appendChild(td);
+  });
+
+  const totalRow = document.getElementById("totalRow");
+  const totalTd = document.createElement("td");
+  const totalInput = document.createElement("input");
+  totalInput.type = "number";
+  totalInput.value = "";
+  totalInput.placeholder = "面積";
+  totalInput.style.width = "100px";
+  totalInput.oninput = calculateFixedTotal;
+  totalTd.appendChild(totalInput);
+  totalRow.appendChild(totalTd);
+}
+
+function getInputValue(cell) {
+  const input = cell.querySelector('input');
+  return input ? parseFloat(input.value) || 0 : 0;
+}
+
+function calculateCrop(colIndex) {
+  const cropRows = document.querySelectorAll("#cropTable tbody tr");
+  const yieldCell = cropRows[0].cells[colIndex];
+  const priceCell = cropRows[1].cells[colIndex];
+  const salesCell = cropRows[2].cells[colIndex];
+  const otherIncomeCell = cropRows[3].cells[colIndex];
+  const totalIncomeCell = cropRows[4].cells[colIndex];
+  const yieldVal = getInputValue(yieldCell);
+  const priceVal = getInputValue(priceCell);
+  const otherIncome = getInputValue(otherIncomeCell);
+  const sales = yieldVal/10 * priceVal; // a単位
+  const totalIncome = sales + otherIncome;
+  salesCell.textContent = sales.toFixed(0);
+  totalIncomeCell.textContent = totalIncome.toFixed(0);
+
+  const costRows = document.querySelectorAll("#costTable tbody tr");
+  const materialCell = costRows[0].cells[colIndex];
+  const laborCell = costRows[1].cells[colIndex];
+  const otherCostCell = costRows[2].cells[colIndex];
+  const totalCostCell = costRows[3].cells[colIndex];
+  const marginCell = costRows[4].cells[colIndex];
+  const marginRateCell = costRows[5].cells[colIndex];
+  const material = getInputValue(materialCell);
+  const labor = getInputValue(laborCell);
+  const otherCost = getInputValue(otherCostCell);
+  const totalCost = material + labor + otherCost;
+  const margin = totalIncome - totalCost;
+  const marginRate = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
+  totalCostCell.textContent = totalCost.toFixed(0);
+  marginCell.textContent = margin.toFixed(0);
+  marginRateCell.textContent = marginRate.toFixed(1) + "%";
+  calculateFixedTotal();
+}
+
+function calculateFixedTotal() {
+  let totalRevenue = 0;
+  let totalVariableCost = 0;
+  const totalRow = document.getElementById("totalRow");
+  const areaInputs = totalRow.querySelectorAll("input[type='number']");
+  areaInputs.forEach((input, index) => {
+    const area = parseFloat(input.value) || 0;
+    const incomeCell = document.querySelectorAll("#cropTable tbody tr")[4].cells[index + 1];
+    const costCell = document.querySelectorAll("#costTable tbody tr")[3].cells[index + 1];
+    const income = parseFloat(incomeCell?.textContent) || 0;
+    const cost = parseFloat(costCell?.textContent) || 0;
+	totalRevenue += income * (area / 10);
+	totalVariableCost += cost * (area / 10);
+
+  });
+  const totalMargin = totalRevenue - totalVariableCost;
+  const marginRate = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
+  const labor = parseFloat(document.getElementById("laborCost").value) || 0;
+  const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
+  const landRent = parseFloat(document.getElementById("landRent").value) || 0;
+  const otherFixed = parseFloat(document.getElementById("otherFixed").value) || 0;
+  const fixedTotal = labor + depreciation + landRent + otherFixed;
+  const profit = totalMargin - fixedTotal;
+  const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
+
+  const summaryTable = document.querySelectorAll("table")[2];
+  summaryTable.rows[1].cells[1].textContent = totalRevenue.toLocaleString();
+  summaryTable.rows[2].cells[1].textContent = totalVariableCost.toLocaleString();
+  summaryTable.rows[3].cells[1].textContent = totalMargin.toLocaleString();
+  summaryTable.rows[4].cells[1].textContent = marginRate.toFixed(1) + "%";
+
+  const profitTable = document.querySelectorAll("table")[4];
+  profitTable.rows[0].cells[1].textContent = profit.toLocaleString();
+  profitTable.rows[1].cells[1].textContent = breakEvenRevenue.toLocaleString();
+
+  document.getElementById("fixedTotal").textContent = fixedTotal.toLocaleString();
+}
+
+// CSV出力
+function tableToCSV() {
+  let csv = [];
+  document.querySelectorAll("table").forEach(table => {
+    table.querySelectorAll("tr").forEach(row => {
+      let rowData = [];
+      row.querySelectorAll("th, td").forEach(cell => {
+        let val = "";
+        if (cell.querySelector("input")) {
+          val = cell.querySelector("input").value;
+        } else {
+          val = cell.textContent;
+        }
+        if (val.includes(",") || val.includes("\n")) {
+          val = `"${val}"`;
+        }
+        rowData.push(val);
+      });
+      csv.push(rowData.join(","));
+    });
+    csv.push("");
+  });
+  return csv.join("\n");
+}
+
+function downloadCSV() {
+  const csvData = tableToCSV();
+
+  // 現在日時の取得
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+
+  // ファイル名を作成（秒は入れない）
+  const fileName = `変動損益計算書_${year}${month}${day}_${hours}${minutes}.csv`;
+
+  const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// CSV入力
+function uploadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split(/\r?\n/);
+    let rowIndex = 0;
+    document.querySelectorAll("table").forEach(table => {
+      table.querySelectorAll("tr").forEach(row => {
+        const cells = row.querySelectorAll("th, td");
+        const values = (lines[rowIndex] || "").split(",");
+        cells.forEach((cell, i) => {
+          if (cell.querySelector("input")) {
+            cell.querySelector("input").value = values[i] || "";
+          } else {
+            cell.textContent = values[i] || "";
+          }
+        });
+        rowIndex++;
+      });
+      rowIndex++;
+    });
+    calculateFixedTotal();
+  };
+  reader.readAsText(file, "utf-8");
+}
+</script>
+</body>
+</html>
