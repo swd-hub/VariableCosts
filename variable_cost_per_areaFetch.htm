@@ -185,7 +185,8 @@ window.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => {
       console.error(err);
-      alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
+      //alert('資材価格.csv の読み込みに失敗しました。ファイルが存在するか確認してください。');
+            alert('ファイルの選択で読み込んでください。');
       // ファイル読み込みに失敗した場合、file1関連のUIを初期化する
       const toggleBtn = document.getElementById('toggleTable1');
       const tableDiv = document.getElementById('table1');
