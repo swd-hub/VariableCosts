@@ -5,31 +5,125 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>損益計算書から固定費を計算する表</title>
 <style>
-  body{
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
-    background:#f7fafc;
-    margin:0;
-    padding:20px;
-    color:#111;
-    font-size:20px; /* 表題以外を20pxに */
-  }
-  .wrap{max-width:720px;margin:0 auto}
-  h1{
-    margin:0 0 14px;
-    font-size:20px; /* 表題は元のまま */
-    color:#083344
-  }
-  .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 4px 12px rgba(8,51,68,0.06);margin-bottom:16px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #eef2f6}
-  th{color:#6b7280;font-weight:600}
-  input[type=number]{width:100%;box-sizing:border-box;padding:6px;border:1px solid #e6eef2;border-radius:6px;font-size:20px}
-  .right{text-align:right}
-  .summary{margin-top:12px}
-  .summary-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;background:#f0fdfa;margin-bottom:6px}
-  .label{color:#555}
-  .value{font-weight:700;color:#0b5660}
-  button.copy-btn{background:#0ea5a3;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:20px}
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+  background: #f7fafc;
+  margin: 0;
+  padding: 20px;
+  color: #111;
+  font-size: 20px; /* 表題以外を20pxに */
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0 0 14px;
+  font-size: 24px; /* 表題は元のまま */
+  color: #083344;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.08); /* 軽い奥行き */
+}
+
+.card {
+  background: linear-gradient(to bottom, #fff, #f9fbfd); /* グラデーションで立体感 */
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(8,51,68,0.06);
+  margin-bottom: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(8,51,68,0.12); /* 浮かせる影を強調 */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid #eef2f6;
+}
+
+th {
+  color: #6b7280;
+  font-weight: 600;
+  background: linear-gradient(to bottom, #f1f5f9, #e2e8f0); /* 見出しを立体感ある背景に */
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+}
+
+input[type=number] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid #e6eef2;
+  border-radius: 6px;
+  font-size: 20px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05); /* 内側影で奥行き */
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+input[type=number]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(14,165,163,0.3), inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+.right {
+  text-align: right;
+}
+
+.summary {
+  margin-top: 12px;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border-radius: 6px;
+  background: linear-gradient(to bottom, #f0fdfa, #ccfbf1);
+  margin-bottom: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.label {
+  color: #555;
+}
+
+.value {
+  font-weight: 700;
+  color: #0b5660;
+}
+
+button.copy-btn {
+  background: linear-gradient(to bottom, #0fb7b4, #0ea5a3);
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+button.copy-btn:hover {
+  background: linear-gradient(to bottom, #11d1cd, #0b8f8c);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+
+button.copy-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15); /* 押し込み感 */
+}
 </style>
 </head>
 <body>
@@ -59,7 +153,7 @@
       </tr>
     </table>
 
-    <h3 style="margin-top:16px;margin-bottom:8px;font-size:16px">面積に応じて変動する費用（変動費）の内訳</h3>
+    <h3 style="margin-top:16px;margin-bottom:8px;font-size:20px">面積に応じて変動する費用（変動費）の内訳</h3>
     <table id="varTable">
       <tr><td>肥料費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>農薬費</td><td class="right"><input type="number" step="1" value="0"></td></tr>

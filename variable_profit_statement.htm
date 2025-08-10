@@ -4,97 +4,135 @@
 <meta charset="UTF-8">
 <title>変動損益計算書</title>
 <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f4f6f8;
-    color: #333;
-    margin: 30px;
-  }
-  h1 {
-    font-size: 28px;
-    margin-bottom: 20px;
-    color: #2c3e50;
-  }
-  table {
-    table-layout: fixed;
-    border-collapse: collapse;
-    width: 100%;
-    margin-bottom: 40px;
-    background-color: #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  caption {
-    text-align: left;
-    font-weight: bold;
-    font-size: 22px;
-    padding: 12px 16px;
-    background-color: #3498db;
-    color: white;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px 10px;
-    text-align: right;
-    font-size: 20px;
-  }
-  th:first-child, td:first-child {
-    background-color: #f0f3f5;
-    text-align: left;
-    font-weight: 600;
-    width: 200px;
-  }
-  thead th {
-    background-color: #ecf0f1;
-    font-weight: 600;
-    text-align: center;
-  }
-  tbody tr:hover {
-    background-color: #f9fcff;
-  }
-  input[type="number"], input[type="text"] {
-    width: 100px;
-    padding: 4px 6px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 20px;
-    text-align: right;
-  }
-  #control {
-    margin-bottom: 20px;
-  }
-  #control button {
-    padding: 6px 12px;
-    font-size: 14px;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 20px;
-    margin-right: 10px;
-  }
-  #control button:hover {
-    background-color: #2980b9;
-  }
-  #fixedTotal {
-    font-weight: bold;
-    color: #2c3e50;
-  }
-  .summary-table {
-  width: 100%;         /* 左寄せでコンパクトに */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+  margin: 30px;
+}
+
+h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.08); /* 軽く奥行き */
+}
+
+table {
+  table-layout: fixed;
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 40px;
+  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+table:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15); /* 浮かせる影 */
+}
+
+caption {
+  text-align: left;
+  font-weight: bold;
+  font-size: 22px;
+  padding: 12px 16px;
+  background: linear-gradient(to bottom, #4daef0, #3498db);
+  color: white;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,0.2);
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px 10px;
+  text-align: right;
+  font-size: 20px;
+}
+
+th:first-child, td:first-child {
+  background: linear-gradient(to bottom, #f5f8fa, #e7ecef);
+  text-align: left;
+  font-weight: 600;
+  width: 200px;
+}
+
+thead th {
+  background: linear-gradient(to bottom, #f0f3f5, #dfe4e7);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+}
+
+tbody tr:hover {
+  background: linear-gradient(to bottom, #f9fcff, #eef6ff);
+}
+
+input[type="number"], input[type="text"] {
+  width: 100px;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 20px;
+  text-align: right;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05); /* 凹み感 */
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+input[type="number"]:focus, input[type="text"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52,152,219,0.3), inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+#control {
+  margin-bottom: 20px;
+}
+
+#control button {
+  padding: 6px 12px;
+  background: linear-gradient(to bottom, #4daef0, #3498db);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  margin-right: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#control button:hover {
+  background: linear-gradient(to bottom, #5eb9f5, #2980b9);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+
+#control button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+#fixedTotal {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.summary-table {
+  width: 100%;
   margin-left: 0;
   margin-bottom: 40px;
 }
-.summary-table td, 
+
+.summary-table td,
 .summary-table th {
-  text-align: left;     /* 数値も左寄せ */
-}
-.summary-table input {
-  text-align: right;    /* 入力は右寄せでもOKなら残す */
+  text-align: left;
 }
 
+.summary-table input {
+  text-align: right;
+}
 </style>
 </head>
 <body>
