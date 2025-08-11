@@ -143,23 +143,23 @@ input[type="number"]:focus, input[type="text"]:focus {
 .speak-on-hover::after {
   content: attr(data-speech);
   position: absolute;
-  bottom: calc(100% + 8px); /* 少し余白を追加 */
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   background: #333;
   color: #fff;
-  padding: 6px 10px;
-  border-radius: 5px;
-  white-space: nowrap;
+  padding: 8px 12px;
+  border-radius: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
-  z-index: 9999; /* 他の要素より前面に */
-  font-size: 0.7em;
-  max-width: 90vw; /* 画面幅に収まるように */
+  z-index: 9999;
+  font-size: 0.8em;
+  max-width: 300px; /* ← 横幅を広げる */
+  white-space: normal; /* ← 折り返しを許可 */
   box-sizing: border-box;
+  word-break: break-word; /* ← 長い単語も折り返し */
 }
-
 .speak-on-hover:hover::after {
   opacity: 1;
 }
