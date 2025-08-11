@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>予想使用可能年数による固定資産台帳</title>
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+  margin: 30px;
+}
+h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
+}
+table {
+  table-layout: fixed;
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 40px;
+  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+table:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+caption {
+  text-align: left;
+  font-weight: bold;
+  font-size: 22px;
+  padding: 12px 16px;
+  background: linear-gradient(to bottom, #4daef0, #3498db);
+  color: white;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,0.2);
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px 10px;
+  text-align: right;
+  font-size: 20px;
+}
+th:first-child, td:first-child {
+  background: linear-gradient(to bottom, #f5f8fa, #e7ecef);
+  text-align: left;
+  font-weight: 600;
+  width: 200px;
+}
+thead th {
+  background: linear-gradient(to bottom, #f0f3f5, #dfe4e7);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+}
+tbody tr:hover {
+  background: linear-gradient(to bottom, #f9fcff, #eef6ff);
+}
+/* 今の入力欄スタイル */
+input[type="number"], input[type="text"] {
+  width: 100px;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 20px;
+  text-align: right;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+/* 期末日入力欄だけ幅を自動に戻す */
+input[type="date"] {
+  width: auto;
+  font-size: 18px;
+  padding: 4px 6px;
+}
+input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52,152,219,0.3), inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+#control {
+  margin-bottom: 20px;
+}
+#control button {
+  padding: 6px 12px;
+  background: linear-gradient(to bottom, #4daef0, #3498db);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  margin-right: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+#control button:hover {
+  background: linear-gradient(to bottom, #5eb9f5, #2980b9);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+#control button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+#fixedTotal {
+  font-weight: bold;
+  color: #2c3e50;
+}
+#filterCategory{
+ font-size:20px;
+}
+.summary-table {
+  width: 100%;
+  margin-left: 0;
+  margin-bottom: 40px;
+}
+.summary-table td,
+.summary-table th {
+  text-align: left;
+}
+.summary-table input {
+  text-align: right;
+}
+
+</style>
+</head>
+<body>
+
+<h1>予想使用可能年数による固定資産台帳</h1>
+
+<div id="control">
+  <input type="file" id="csvFile" accept=".csv">
+  <button id="downloadCsv">データファイル保存</button>
+  期末日: <input type="date" id="periodEnd">
+  <br><br>
+  <button id="calcBtn">計算</button>
+  減価償却費合計: <span id="totalDep">0</span> 円
+  <button id="copyTotal">コピー</button>
+  <br><br>
+  <button id="addRow">行追加</button>
+
+</div>
+
+<table id="assetTable">
+  <thead>
+    <tr>
+      <th>
+        資産区分<br>
+        <select id="filterCategory">
+          <option value="">全て</option>
+          <option value="機械">機械</option>
+          <option value="施設">施設</option>
+          <option value="建物">建物</option>
+          <option value="生物">生物</option>
+        </select>
+      </th>
+      <th>名称</th>
+      <th>取得年月日</th>
+      <th>取得価額</th>
+      <th>予想使用可能年数</th>
+      <th>減価償却費</th>
+      <th>備考</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+let assets = [];
+
+const tableBody = document.querySelector("#assetTable tbody");
+const periodEndInput = document.getElementById("periodEnd");
+const totalDepSpan = document.getElementById("totalDep");
+const filterSelect = document.getElementById("filterCategory");
+
+function renderTable() {
+  tableBody.innerHTML = "";
+  const filterCat = filterSelect.value;
+
+  assets.forEach((asset) => {
+    if (filterCat && asset.category !== filterCat) return;
+
+    const tr = document.createElement("tr");
+
+    // 資産区分
+    const tdCat = document.createElement("td");
+    const selCat = document.createElement("select");
+    ["機械","施設","建物","生物"].forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      if (asset.category === cat) opt.selected = true;
+      selCat.appendChild(opt);
+    });
+    selCat.addEventListener("change", () => { asset.category = selCat.value; });
+    tdCat.appendChild(selCat);
+    tr.appendChild(tdCat);
+
+    // 名称
+    const tdName = document.createElement("td");
+    const inpName = document.createElement("input");
+    inpName.type = "text";
+    inpName.value = asset.name || "";
+    inpName.addEventListener("input", () => { asset.name = inpName.value; });
+    tdName.appendChild(inpName);
+    tr.appendChild(tdName);
+
+    // 取得年月日
+    const tdDate = document.createElement("td");
+    const inpDate = document.createElement("input");
+    inpDate.type = "date";
+    inpDate.value = asset.acqDate || "";
+    inpDate.addEventListener("change", () => { asset.acqDate = inpDate.value; });
+    tdDate.appendChild(inpDate);
+    tr.appendChild(tdDate);
+
+    // 取得価額
+    const tdPrice = document.createElement("td");
+    const inpPrice = document.createElement("input");
+    inpPrice.type = "number";
+    inpPrice.min = 0;
+    inpPrice.value = asset.price || "";
+    inpPrice.addEventListener("input", () => { asset.price = parseInt(inpPrice.value) || 0; });
+    tdPrice.appendChild(inpPrice);
+    tr.appendChild(tdPrice);
+
+    // 使用可能年数
+    const tdYears = document.createElement("td");
+    const inpYears = document.createElement("input");
+    inpYears.type = "number";
+    inpYears.min = 1;
+    inpYears.value = asset.years || "";
+    inpYears.addEventListener("input", () => { asset.years = parseInt(inpYears.value) || 0; });
+    tdYears.appendChild(inpYears);
+    tr.appendChild(tdYears);
+
+    // 減価償却費
+    const tdDep = document.createElement("td");
+    tdDep.textContent = asset.dep != null ? asset.dep.toLocaleString() : "";
+    tr.appendChild(tdDep);
+
+    // 備考
+    const tdNote = document.createElement("td");
+    const inpNote = document.createElement("input");
+    inpNote.type = "text";
+    inpNote.value = asset.note || "";
+    inpNote.addEventListener("input", () => { asset.note = inpNote.value; });
+    tdNote.appendChild(inpNote);
+    tr.appendChild(tdNote);
+
+    tableBody.appendChild(tr);
+  });
+}
+
+function calcDep(asset) {
+  if (!asset.acqDate || !asset.years || !asset.price) return 0;
+  const end = periodEndInput.value ? new Date(periodEndInput.value) : null;
+  if (!end) return 0;
+  const acqDate = new Date(asset.acqDate);
+  const endYear = acqDate.getFullYear() + asset.years;
+  const depreciation = Math.floor(asset.price / asset.years);
+  if (end.getFullYear() >= endYear) return 0;
+  return depreciation;
+}
+
+document.getElementById("calcBtn").addEventListener("click", () => {
+  let totalDep = 0;
+  assets.forEach(a => {
+    a.dep = calcDep(a);
+    totalDep += a.dep;
+  });
+  totalDepSpan.textContent = totalDep.toLocaleString();
+  renderTable();
+});
+
+document.getElementById("addRow").addEventListener("click", () => {
+  assets.push({category:"機械", name:"", acqDate:"", price:0, years:0, note:"", dep:null});
+  renderTable();
+});
+
+filterSelect.addEventListener("change", renderTable);
+
+document.getElementById("copyTotal").addEventListener("click", () => {
+  navigator.clipboard.writeText(totalDepSpan.textContent.replace(/,/g,""));
+  alert("減価償却費合計をコピーしました");
+});
+
+document.getElementById("csvFile").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split("\n").map(l => l.trim()).filter(l => l);
+    assets = lines.slice(1).map(line => {
+      const [category,name,acqDate,price,years,dep,note] = line.split(",");
+      return {category, name, acqDate, price: parseInt(price) || 0, years: parseInt(years) || 0, dep: parseInt(dep) || null, note};
+    });
+    renderTable();
+  };
+  reader.readAsText(file, "UTF-8");
+});
+
+document.getElementById("downloadCsv").addEventListener("click", () => {
+  let csv = "資産区分,名称,取得年月日,取得価額,予想使用可能年数,減価償却費,備考\n";
+  assets.forEach(a => {
+    csv += [a.category, a.name, a.acqDate, a.price, a.years, a.dep || 0, a.note].join(",") + "\n";
+  });
+  const blob = new Blob([csv], {type: "text/csv"});
+  const url = URL.createObjectURL(blob);
+  const periodEnd = periodEndInput.value || "未設定";
+  const filename = `予想使用可能年数の固定資産台帳_${periodEnd}.csv`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderTable();
+</script>
+</body>
+</html>
