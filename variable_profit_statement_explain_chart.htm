@@ -677,41 +677,41 @@ document.querySelector('input[type="file"]').addEventListener('change', function
 
 //グラフ作成
 function drawStackedChart() {
-  const areaRow = document.querySelector("#totalTable tbody tr:nth-child(1)");
   const revenueRow = document.querySelector("#totalTable tbody tr:nth-child(2)");
   const varCostRow = document.querySelector("#totalTable tbody tr:nth-child(3)");
   const marginRow = document.querySelector("#totalTable tbody tr:nth-child(4)");
 
-  const labels = [];
-  const variableCosts = [];
-  const margins = [];
+  const revenue = parseFloat(revenueRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
+  const variableCost = parseFloat(varCostRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
+  const margin = parseFloat(marginRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
 
-  const cells = areaRow.querySelectorAll("input");
-  cells.forEach((input, i) => {
-    const cropName = document.querySelector(`#cropHeader th:nth-child(${i + 2}) input`).value || `作目${i + 1}`;
-    labels.push(cropName);
+  const labor = parseFloat(document.getElementById("laborCost").value) || 0;
+  const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
+  const landRent = parseFloat(document.getElementById("landRent").value) || 0;
+  const otherFixed = parseFloat(document.getElementById("otherFixed").value) || 0;
+  const fixedTotal = labor + depreciation + landRent + otherFixed;
 
-    const vcost = parseFloat(varCostRow.cells[i + 1]?.textContent.replace(/,/g, "")) || 0;
-    const margin = parseFloat(marginRow.cells[i + 1]?.textContent.replace(/,/g, "")) || 0;
-
-    variableCosts.push(vcost);
-    margins.push(margin);
-  });
+  const profit = margin - fixedTotal;
 
   const ctx = document.getElementById("stackedChart").getContext("2d");
   new Chart(ctx, {
     type: "bar",
     data: {
-      labels: labels,
+      labels: [""], // 横軸なし
       datasets: [
         {
           label: "変動費",
-          data: variableCosts,
+          data: [variableCost],
           backgroundColor: "#f08080"
         },
         {
-          label: "限界利益",
-          data: margins,
+          label: "固定費",
+          data: [fixedTotal],
+          backgroundColor: "#ffa07a"
+        },
+        {
+          label: "利益",
+          data: [profit],
           backgroundColor: "#87cefa"
         }
       ]
@@ -720,22 +720,31 @@ function drawStackedChart() {
       plugins: {
         title: {
           display: true,
-          text: "作目ごとの変動費＋限界利益（面積反映済）"
+          text: "ストラック図（参考画像準拠）"
+        },
+        legend: {
+          position: "bottom"
         }
       },
       responsive: true,
       scales: {
         x: {
-          stacked: true
+          stacked: true,
+          ticks: { display: false }
         },
         y: {
           stacked: true,
-          beginAtZero: true
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "金額（円）"
+          }
         }
       }
     }
   });
-}  
+}
+
   
 </script>
 
@@ -743,3 +752,4 @@ function drawStackedChart() {
 </body>
 
 </html>
+
