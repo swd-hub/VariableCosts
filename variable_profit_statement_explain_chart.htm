@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <title>変動損益計算書</title>
 <style>
 body {
@@ -683,13 +684,12 @@ function drawStackedChart() {
   const costRows = document.querySelectorAll("#costTable tbody tr");
   const areaInputs = document.querySelectorAll("#totalTable tbody tr:nth-child(1) input[type='number']");
 
-  const cropCount = areaInputs.length;
-  const cropMargins = [];
   let totalSales = 0;
   let totalOtherIncome = 0;
   let totalVariableCost = 0;
-  let totalMargin = 0;
+  let cropMargins = [];
 
+  // 作目ごとの集計
   areaInputs.forEach((input, idx) => {
     const area = parseFloat(input.value) || 0;
     const factor = area / 10;
@@ -697,8 +697,8 @@ function drawStackedChart() {
 
     const sales10a = parseFloat(cropRows[2].cells[colIndex]?.textContent) || 0;
     const otherIncome10a = parseFloat(cropRows[3].cells[colIndex]?.textContent) || 0;
-    const margin10a = parseFloat(costRows[4].cells[colIndex]?.textContent) || 0;
     const varCost10a = parseFloat(costRows[3].cells[colIndex]?.textContent) || 0;
+    const margin10a = parseFloat(costRows[4].cells[colIndex]?.textContent) || 0;
 
     totalSales += sales10a * factor;
     totalOtherIncome += otherIncome10a * factor;
@@ -707,8 +707,9 @@ function drawStackedChart() {
   });
 
   const revenue = totalSales + totalOtherIncome;
-  const margin = totalMargin = revenue - totalVariableCost;
+  const margin = revenue - totalVariableCost;
 
+  // 固定費
   const labor = parseFloat(document.getElementById("laborCost").value) || 0;
   const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
   const landRent = parseFloat(document.getElementById("landRent").value) || 0;
@@ -717,47 +718,24 @@ function drawStackedChart() {
 
   const profit = margin - fixedTotal;
 
+  // 既存チャートを破棄（再描画用）
+  if (window.stackedChartInstance) {
+    window.stackedChartInstance.destroy();
+  }
+
   const ctx = document.getElementById("stackedChart").getContext("2d");
-  new Chart(ctx, {
+  window.stackedChartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
       datasets: [
-        {
-          label: "収入",
-          data: [revenue, 0, 0, 0, 0],
-          backgroundColor: "#4682b4"
-        },
-        {
-          label: "販売収入",
-          data: [0, totalSales, 0, 0, 0],
-          backgroundColor: "#3cb371"
-        },
-        {
-          label: "その他収入",
-          data: [0, totalOtherIncome, 0, 0, 0],
-          backgroundColor: "#90ee90"
-        },
-        {
-          label: "変動費",
-          data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost],
-          backgroundColor: "#f08080"
-        },
-        {
-          label: "固定費",
-          data: [0, 0, fixedTotal, 0, 0],
-          backgroundColor: "#ffa07a"
-        },
-        {
-          label: "利益",
-          data: [0, 0, profit, 0, 0],
-          backgroundColor: "#87cefa"
-        },
-        {
-          label: "限界利益（全体）",
-          data: [0, 0, 0, margin, 0],
-          backgroundColor: "#6495ed"
-        },
+        { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4" },
+        { label: "販売収入", data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371" },
+        { label: "その他収入", data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90" },
+        { label: "変動費", data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080" },
+        { label: "固定費", data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a" },
+        { label: "利益", data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa" },
+        { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed" },
         ...cropMargins.map((val, i) => ({
           label: `作目${i + 1}限界利益`,
           data: [0, 0, 0, 0, val],
@@ -767,12 +745,15 @@ function drawStackedChart() {
     },
     options: {
       plugins: {
+        legend: { display: false }, // 外部凡例を非表示
+        datalabels: {
+          color: "#000",
+          font: { weight: "bold" },
+          formatter: (value, ctx) => value ? `${ctx.dataset.label}\n${value.toLocaleString()}円` : ""
+        },
         title: {
           display: true,
           text: "農業経営の収支構成（動的積み上げ棒グラフ）"
-        },
-        legend: {
-          position: "bottom"
         }
       },
       responsive: true,
@@ -780,25 +761,23 @@ function drawStackedChart() {
         x: {
           stacked: true,
           categoryPercentage: 0.9,
-          barPercentage: 1.0,
-          title: {
-            display: true,
-            text: "構成項目"
-          }
+          barPercentage: 1.0
         },
         y: {
           stacked: true,
           beginAtZero: true,
-          title: {
-            display: true,
-            text: "金額（円）"
-          }
+          title: { display: true, text: "金額（円）" }
         }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
-  
+
+// データ変更時に自動更新
+document.querySelectorAll("input").forEach(input => {
+  input.addEventListener("input", drawStackedChart);
+});  
 </script>
 
 
