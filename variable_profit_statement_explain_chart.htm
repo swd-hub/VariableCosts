@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
 <title>変動損益計算書</title>
 <style>
 body {
@@ -289,6 +290,7 @@ table#totalTable input[type="number"] {
   <tr><td>損益分岐点の収入（円）</td><td></td></tr>
 </table>
 
+<canvas id="stackedChart" width="800" height="400"></canvas>
 
 <script>
 let cropCount = 0;
@@ -672,8 +674,72 @@ document.querySelector('input[type="file"]').addEventListener('change', function
 
   reader.readAsText(file);
 });
+
+//グラフ作成
+function drawStackedChart() {
+  const areaRow = document.querySelector("#totalTable tbody tr:nth-child(1)");
+  const revenueRow = document.querySelector("#totalTable tbody tr:nth-child(2)");
+  const varCostRow = document.querySelector("#totalTable tbody tr:nth-child(3)");
+  const marginRow = document.querySelector("#totalTable tbody tr:nth-child(4)");
+
+  const labels = [];
+  const variableCosts = [];
+  const margins = [];
+
+  const cells = areaRow.querySelectorAll("input");
+  cells.forEach((input, i) => {
+    const cropName = document.querySelector(`#cropHeader th:nth-child(${i + 2}) input`).value || `作目${i + 1}`;
+    labels.push(cropName);
+
+    const vcost = parseFloat(varCostRow.cells[i + 1]?.textContent.replace(/,/g, "")) || 0;
+    const margin = parseFloat(marginRow.cells[i + 1]?.textContent.replace(/,/g, "")) || 0;
+
+    variableCosts.push(vcost);
+    margins.push(margin);
+  });
+
+  const ctx = document.getElementById("stackedChart").getContext("2d");
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "変動費",
+          data: variableCosts,
+          backgroundColor: "#f08080"
+        },
+        {
+          label: "限界利益",
+          data: margins,
+          backgroundColor: "#87cefa"
+        }
+      ]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: "作目ごとの変動費＋限界利益（面積反映済）"
+        }
+      },
+      responsive: true,
+      scales: {
+        x: {
+          stacked: true
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}  
+  
 </script>
 
 
 </body>
+
 </html>
