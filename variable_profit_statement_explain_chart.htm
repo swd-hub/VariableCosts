@@ -679,13 +679,35 @@ document.querySelector('input[type="file"]').addEventListener('change', function
 
 //グラフ作成
 function drawStackedChart() {
-  const revenueRow = document.querySelector("#totalTable tbody tr:nth-child(2)");
-  const varCostRow = document.querySelector("#totalTable tbody tr:nth-child(3)");
-  const marginRow = document.querySelector("#totalTable tbody tr:nth-child(4)");
+  const cropRows = document.querySelectorAll("#cropTable tbody tr");
+  const costRows = document.querySelectorAll("#costTable tbody tr");
+  const areaInputs = document.querySelectorAll("#totalTable tbody tr:nth-child(1) input[type='number']");
 
-  const revenue = parseFloat(revenueRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
-  const variableCost = parseFloat(varCostRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
-  const margin = parseFloat(marginRow.cells[1]?.textContent.replace(/,/g, "")) || 0;
+  const cropCount = areaInputs.length;
+  const cropMargins = [];
+  let totalSales = 0;
+  let totalOtherIncome = 0;
+  let totalVariableCost = 0;
+  let totalMargin = 0;
+
+  areaInputs.forEach((input, idx) => {
+    const area = parseFloat(input.value) || 0;
+    const factor = area / 10;
+    const colIndex = idx + 1;
+
+    const sales10a = parseFloat(cropRows[2].cells[colIndex]?.textContent) || 0;
+    const otherIncome10a = parseFloat(cropRows[3].cells[colIndex]?.textContent) || 0;
+    const margin10a = parseFloat(costRows[4].cells[colIndex]?.textContent) || 0;
+    const varCost10a = parseFloat(costRows[3].cells[colIndex]?.textContent) || 0;
+
+    totalSales += sales10a * factor;
+    totalOtherIncome += otherIncome10a * factor;
+    totalVariableCost += varCost10a * factor;
+    cropMargins.push(margin10a * factor);
+  });
+
+  const revenue = totalSales + totalOtherIncome;
+  const margin = totalMargin = revenue - totalVariableCost;
 
   const labor = parseFloat(document.getElementById("laborCost").value) || 0;
   const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
@@ -699,30 +721,55 @@ function drawStackedChart() {
   new Chart(ctx, {
     type: "bar",
     data: {
-      labels: [""], // 横軸なし
+      labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
       datasets: [
         {
+          label: "収入",
+          data: [revenue, 0, 0, 0, 0],
+          backgroundColor: "#4682b4"
+        },
+        {
+          label: "販売収入",
+          data: [0, totalSales, 0, 0, 0],
+          backgroundColor: "#3cb371"
+        },
+        {
+          label: "その他収入",
+          data: [0, totalOtherIncome, 0, 0, 0],
+          backgroundColor: "#90ee90"
+        },
+        {
           label: "変動費",
-          data: [variableCost],
+          data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost],
           backgroundColor: "#f08080"
         },
         {
           label: "固定費",
-          data: [fixedTotal],
+          data: [0, 0, fixedTotal, 0, 0],
           backgroundColor: "#ffa07a"
         },
         {
           label: "利益",
-          data: [profit],
+          data: [0, 0, profit, 0, 0],
           backgroundColor: "#87cefa"
-        }
+        },
+        {
+          label: "限界利益（全体）",
+          data: [0, 0, 0, margin, 0],
+          backgroundColor: "#6495ed"
+        },
+        ...cropMargins.map((val, i) => ({
+          label: `作目${i + 1}限界利益`,
+          data: [0, 0, 0, 0, val],
+          backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5]
+        }))
       ]
     },
     options: {
       plugins: {
         title: {
           display: true,
-          text: "ストラック図（参考画像準拠）"
+          text: "農業経営の収支構成（動的積み上げ棒グラフ）"
         },
         legend: {
           position: "bottom"
@@ -732,7 +779,12 @@ function drawStackedChart() {
       scales: {
         x: {
           stacked: true,
-          ticks: { display: false }
+          categoryPercentage: 0.9,
+          barPercentage: 1.0,
+          title: {
+            display: true,
+            text: "構成項目"
+          }
         },
         y: {
           stacked: true,
@@ -746,7 +798,6 @@ function drawStackedChart() {
     }
   });
 }
-
   
 </script>
 
