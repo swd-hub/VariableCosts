@@ -218,6 +218,10 @@ table#totalTable input[type="number"] {
   box-sizing: border-box;
 }
 
+canvas {
+  width: 100% ;
+  height: 500px;
+}
 
 </style>
 </head>
@@ -551,6 +555,7 @@ function calculateFixedTotal() {
   const profit = totalMargin - fixedTotal;
   const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
 
+
   // 固定費合計の表示
   document.getElementById("fixedTotal").textContent = fixedTotal.toLocaleString();
 
@@ -840,52 +845,82 @@ function drawStackedChart() {
   if (window.stackedChartInstance) window.stackedChartInstance.destroy();
 
   // グラフ描画
-  const ctx = document.getElementById("stackedChart").getContext("2d");
-  window.stackedChartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
-      datasets: [
-        { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4" },
-        { label: "販売額",       data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371", stack: "bar2" },
-        { label: "その他収入",   data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90", stack: "bar2" },
-        { label: "変動費",       data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080" },
-        { label: "固定費",       data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a" },
-        { label: "利益",         data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa" },
-        { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed" },
-        // 作目別限界利益
-        ...cropMargins.map((val, i) => ({
-          label: `${cropNames[i]} 限界利益`,
-          data: [0, 0, 0, 0, val],
-          backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5]
-        }))
-      ]
-    },
-    options: {
-      plugins: {
-        legend:  { display: false },
-        datalabels: {
-          color: "#000",
-          font: { weight: "bold", size: 11 },
-          formatter: (value, ctx) => value
-            ? `${ctx.dataset.label}\n${Math.round(value).toLocaleString()}円`
-            : ""
-        },
-        title: {
-          display: true,
-          text: "農業経営の収支構成",
-          font: { size: 20, weight: "bold" },
-          padding: { top: 8, bottom: 12 }
+const ctx = document.getElementById("stackedChart").getContext("2d");
+window.stackedChartInstance = new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
+    datasets: [
+      { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4", stack: "stack1", barThickness: 200 },
+      { label: "販売額", data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371", stack: "stack1", barThickness: 200 },
+      { label: "その他収入", data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90", stack: "stack1", barThickness: 200 },
+      { label: "変動費", data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080", stack: "stack1", barThickness: 200 },
+      { label: "固定費", data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a", stack: "stack1", barThickness: 200 },
+      { label: "利益", data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa", stack: "stack1", barThickness: 200 },
+      { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed", stack: "stack1", barThickness: 200 },
+      ...cropMargins.map((val, i) => ({
+        label: `${cropNames[i]} 限界利益`,
+        data: [0, 0, 0, 0, val],
+        backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5],
+        stack: "stack1",
+        barThickness: 200
+      }))
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      x: {
+        stacked: true,
+        categoryPercentage: 0.9,
+        barPercentage: 1.0,
+        ticks: {
+          font: {
+            size: 18,
+            weight: "bold"
+          }
         }
       },
-      responsive: true,
-      scales: {
-        x: { stacked: true, categoryPercentage: 0.9, barPercentage: 1.0 },
-        y: { stacked: true, beginAtZero: true, title: { display: true, text: "金額（円）" } }
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: "金額（円）",
+          font: {
+            size: 16,
+            weight: "bold"
+          }
+        },
+        ticks: {
+          font: {
+            size: 20
+          }
+        }
       }
     },
-    plugins: [ChartDataLabels]
-  });
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        color: "#000",
+        font: { weight: "bold", size: 14 },
+        formatter: (value, ctx) => value
+          ? `${ctx.dataset.label}\n${Math.round(value).toLocaleString()}円`
+          : ""
+      },
+      title: {
+        display: true,
+        text: "農業経営の収支構成",
+        font: {
+          size: 24,
+          weight: "bold"
+        },
+        padding: { top: 8, bottom: 12 }
+      }
+    }
+  },
+  plugins: [ChartDataLabels]
+});
 
   // 損益分岐点計算
   const cmRatio            = revenue > 0 ? (margin / revenue) : 0;
@@ -907,7 +942,7 @@ function drawStackedChart() {
   setTxt("sumMargin",      margin);
   setTxt("sumCostTotal",   costTotal);
   setTxt("sumProfit",      profit);
-  setTxt("sumBreakEven",   breakEvenRevenue, 3);
+  setTxt("sumBreakEven",   breakEvenRevenue);
 }
 
 // 入力変化で再描画
