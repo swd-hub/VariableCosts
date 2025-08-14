@@ -851,19 +851,19 @@ window.stackedChartInstance = new Chart(ctx, {
   data: {
     labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
     datasets: [
-      { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4", stack: "stack1", barThickness: 200 },
-      { label: "販売額", data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371", stack: "stack1", barThickness: 200 },
-      { label: "その他収入", data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90", stack: "stack1", barThickness: 200 },
-      { label: "変動費", data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080", stack: "stack1", barThickness: 200 },
-      { label: "固定費", data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a", stack: "stack1", barThickness: 200 },
-      { label: "利益", data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa", stack: "stack1", barThickness: 200 },
-      { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed", stack: "stack1", barThickness: 200 },
+      { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4", stack: "stack1", barThickness: 250 },
+      { label: "販売額", data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371", stack: "stack1", barThickness: 250 },
+      { label: "その他収入", data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90", stack: "stack1", barThickness: 250 },
+      { label: "変動費", data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080", stack: "stack1", barThickness: 250 },
+      { label: "固定費", data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a", stack: "stack1", barThickness: 250 },
+      { label: "利益", data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa", stack: "stack1", barThickness: 250 },
+      { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed", stack: "stack1", barThickness: 250 },
       ...cropMargins.map((val, i) => ({
         label: `${cropNames[i]} 限界利益`,
         data: [0, 0, 0, 0, val],
         backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5],
         stack: "stack1",
-        barThickness: 200
+        barThickness: 250
       }))
     ]
   },
@@ -888,7 +888,7 @@ window.stackedChartInstance = new Chart(ctx, {
           display: true,
           text: "金額（円）",
           font: {
-            size: 16,
+            size: 18,
             weight: "bold"
           }
         },
@@ -903,7 +903,7 @@ window.stackedChartInstance = new Chart(ctx, {
       legend: { display: false },
       datalabels: {
         color: "#000",
-        font: { weight: "bold", size: 14 },
+        font: { weight: "bold", size: 20 },
         formatter: (value, ctx) => value
           ? `${ctx.dataset.label}\n${Math.round(value).toLocaleString()}円`
           : ""
