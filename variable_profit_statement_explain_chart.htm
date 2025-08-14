@@ -455,7 +455,7 @@ function calculateCrop(colIndex) {
   const yieldVal = getInputValue(yieldCell);
   const priceVal = getInputValue(priceCell);
   const otherIncome = getInputValue(otherIncomeCell);
-  const sales = yieldVal/10 * priceVal; // a単位
+  const sales = yieldVal* priceVal;    //10a販売額か
   const totalIncome = sales + otherIncome;
   salesCell.textContent = sales.toFixed(0);
   totalIncomeCell.textContent = totalIncome.toFixed(0);
@@ -522,9 +522,10 @@ function calculateFixedTotal() {
     const income10a = parseFloat(cropRows[4].cells[colIndex]?.textContent) || 0;
     const cost10a   = parseFloat(costRows[3].cells[colIndex]?.textContent) || 0;
 
-    const factor = area / 10;
+    const factor = area /10;
 
-    const revenue = income10a * factor;
+    const revenue = income10a * factor; ////////////////////////////////////10a販売額
+    
     const vcost   = cost10a   * factor;
     const margin  = revenue - vcost;
     const mrRate  = revenue > 0 ? (margin / revenue) * 100 : 0;
@@ -667,11 +668,18 @@ function uploadCSV(event) {
       });
     });
 
+    // ★ 各作目の再計算（cropCount が定義されている前提）
+    for (let i = 1; i <= cropCount; i++) {
+      calculateCrop(i);
+    }
+
+    // 固定費の合計なども再計算
     calculateFixedTotal();
   };
 
   reader.readAsText(file, "utf-8");
 }
+
 
 
 // 音声説明のイベント設定
@@ -809,7 +817,7 @@ function drawStackedChart() {
     const varCost10a     = getNum(getCellValue(costRows, 3, col));
     const margin10a      = getNum(getCellValue(costRows, 4, col));
 
-    totalSales        += sales10a * factor;
+    totalSales        += sales10a * factor ;　/////////10a販売額
     totalOtherIncome  += otherInc10a * factor;
     totalVariableCost += varCost10a * factor;
     cropMargins.push(margin10a * factor);
