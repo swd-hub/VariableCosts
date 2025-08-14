@@ -378,6 +378,48 @@ function addCrop() {
 }
 
 
+function renderCsvToTable(csvText, tableId) {
+  const rows = csvText.trim().split(/\r?\n/).map(line =>
+    line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
+  );
+
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  // thead
+  let thead = table.querySelector('thead');
+  if (!thead) {
+    thead = document.createElement('thead');
+    table.appendChild(thead);
+  }
+  thead.innerHTML = '';
+  const headRow = document.createElement('tr');
+  rows[0].forEach(text => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+
+  // tbody
+  let tbody = table.querySelector('tbody');
+  if (!tbody) {
+    tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+  }
+  tbody.innerHTML = '';
+  for (let i = 1; i < rows.length; i++) {
+    const tr = document.createElement('tr');
+    rows[i].forEach(text => {
+      const td = document.createElement('td');
+      td.textContent = text || '–';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+}
+
+
 // totalTable の各行セル数を面積行に合わせる
 function syncTotalTable() {
   const totalTable = document.getElementById("totalTable");
@@ -599,31 +641,35 @@ function downloadCSV() {
   document.body.removeChild(a);
 }
 
-// CSV入力
 function uploadCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = function(e) {
-    const lines = e.target.result.split(/\r?\n/);
-    let rowIndex = 0;
+    const lines = e.target.result.split(/\r?\n/).filter(line => line.trim() !== "");
+    let lineIndex = 0;
+
     document.querySelectorAll("table").forEach(table => {
-      table.querySelectorAll("tr").forEach(row => {
-        const cells = row.querySelectorAll("th, td");
-        const values = (lines[rowIndex] || "").split(",");
+      const rows = table.querySelectorAll("tbody tr, tr"); // tbody優先
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td, th");
+        const values = (lines[lineIndex] || "").split(",");
+
         cells.forEach((cell, i) => {
-          if (cell.querySelector("input")) {
-            cell.querySelector("input").value = values[i] || "";
-          } else {
-            cell.textContent = values[i] || "";
+          const input = cell.querySelector("input");
+          if (input) {
+            input.value = values[i] || "";
           }
         });
-        rowIndex++;
+
+        lineIndex++;
       });
-      rowIndex++;
     });
+
     calculateFixedTotal();
   };
+
   reader.readAsText(file, "utf-8");
 }
 
@@ -715,9 +761,9 @@ document.querySelector('input[type="file"]').addEventListener('change', function
   reader.readAsText(file);
 });
 
-//グラフ作成
+//描画
 function drawStackedChart() {
-  // 安全に数値化
+  // 数値化ユーティリティ
   const getNum = (v) => {
     const s = String(v || "").replace(/,/g, "").trim();
     if (s === "" || s === "–") return 0;
@@ -725,106 +771,97 @@ function drawStackedChart() {
     return isNaN(n) ? 0 : n;
   };
 
+  // 指定行・列のセルから、inputがあればvalue、なければtextContentを取得
+  const getCellValue = (rows, r, c) => {
+    const cell = rows[r]?.cells[c];
+    if (!cell) return "";
+    const inp = cell.querySelector("input");
+    return inp ? inp.value : cell.textContent;
+  };
+
   const cropRows   = document.querySelectorAll("#cropTable tbody tr");
   const costRows   = document.querySelectorAll("#costTable tbody tr");
   const areaInputs = document.querySelectorAll("#totalTable tbody tr:nth-child(1) input[type='number']");
 
-  // 作目名
-  const headerCells = document.querySelectorAll("#cropTable thead tr:first-child th");
-  const cropNames = [];
-  headerCells.forEach((th, index) => {
-    if (index > 0) {
-      const name = th.textContent.trim();
-      cropNames.push(name || `作目${index}`);
-    }
-  });
+  // 作目名（<input> or th.textContent）
+  const cropNames = Array.from(document.querySelectorAll("#cropHeader th"))
+    .slice(1)
+    .map(th => {
+      const inp = th.querySelector("input");
+      return inp ? inp.value.trim() : th.textContent.trim();
+    })
+    .map(n => n || "未設定");
 
-  let totalSales = 0;
-  let totalOtherIncome = 0;
+  let totalSales        = 0;
+  let totalOtherIncome  = 0;
   let totalVariableCost = 0;
-  const cropMargins = [];
+  const cropMargins     = [];
 
-  // 面積換算集計
+  // 面積でスケーリングして集計
   areaInputs.forEach((input, idx) => {
     const area    = getNum(input.value);
     const factor  = area / 10;
-    const colIndex = idx + 1;
+    const col     = idx + 1;
 
-    const sales10a       = getNum(cropRows[2].cells[colIndex]?.textContent); // 10a販売額
-    const otherIncome10a = getNum(cropRows[3].cells[colIndex]?.textContent); // 10aその他収入
-    const varCost10a     = getNum(costRows[3].cells[colIndex]?.textContent); // 10a変動費計
-    const margin10a      = getNum(costRows[4].cells[colIndex]?.textContent); // 10a限界利益
+    // 各セルの値を取得
+    const sales10a       = getNum(getCellValue(cropRows, 2, col));
+    const otherInc10a    = getNum(getCellValue(cropRows, 3, col));
+    const varCost10a     = getNum(getCellValue(costRows, 3, col));
+    const margin10a      = getNum(getCellValue(costRows, 4, col));
 
     totalSales        += sales10a * factor;
-    totalOtherIncome  += otherIncome10a * factor;
+    totalOtherIncome  += otherInc10a * factor;
     totalVariableCost += varCost10a * factor;
-
-    // 必要なら margin10a ではなく再計算に切り替え可:
-    // const cmScaled = (sales10a + otherIncome10a - varCost10a) * factor;
-    // cropMargins.push(cmScaled);
     cropMargins.push(margin10a * factor);
   });
 
-  const revenue = totalSales + totalOtherIncome;  // 総収入
-  const margin  = revenue - totalVariableCost;    // 限界利益
+  const revenue = totalSales + totalOtherIncome;
+  const margin  = revenue - totalVariableCost;
 
-  // 固定費
+  // 固定費集計
   const labor        = getNum(document.getElementById("laborCost")?.value);
   const depreciation = getNum(document.getElementById("depreciation")?.value);
   const landRent     = getNum(document.getElementById("landRent")?.value);
   const otherFixed   = getNum(document.getElementById("otherFixed")?.value);
   const fixedTotal   = labor + depreciation + landRent + otherFixed;
 
-  const costTotal = totalVariableCost + fixedTotal; // ← 全角→半角に修正
+  const costTotal = totalVariableCost + fixedTotal;
   const profit    = margin - fixedTotal;
 
   // 既存チャートを破棄
   if (window.stackedChartInstance) window.stackedChartInstance.destroy();
 
+  // グラフ描画
   const ctx = document.getElementById("stackedChart").getContext("2d");
   window.stackedChartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels: ["収入", "販売＋その他", "費用＋利益", "限界利益", "作目別限界利益"],
       datasets: [
-        // === 棒①：収入 ===
         { label: "収入", data: [revenue, 0, 0, 0, 0], backgroundColor: "#4682b4" },
-
-        // === 棒②：販売額＋その他収入（帯） ===
-        { label: "販売額",
-          data: [0, totalSales || 0, 0, 0, 0],
-          backgroundColor: "#3cb371",
-          stack: "bar2"
-        },
-        { label: "その他収入",
-          data: [0, totalOtherIncome || 0, 0, 0, 0],
-          backgroundColor: "#90ee90",
-          stack: "bar2"
-        },
-
-        // === 棒③：費用＋利益 ===
-        { label: "変動費", data: [0, 0, totalVariableCost || 0, totalVariableCost || 0, totalVariableCost || 0], backgroundColor: "#f08080" },
-        { label: "固定費", data: [0, 0, fixedTotal || 0, 0, 0], backgroundColor: "#ffa07a" },
-        { label: "利益",   data: [0, 0, profit || 0, 0, 0], backgroundColor: "#87cefa" },
-
-        // === 棒④：限界利益（全体） ===
-        { label: "限界利益（全体）", data: [0, 0, 0, margin || 0, 0], backgroundColor: "#6495ed" },
-
-        // === 棒⑤：作目別限界利益（具体名） ===
+        { label: "販売額",       data: [0, totalSales, 0, 0, 0], backgroundColor: "#3cb371", stack: "bar2" },
+        { label: "その他収入",   data: [0, totalOtherIncome, 0, 0, 0], backgroundColor: "#90ee90", stack: "bar2" },
+        { label: "変動費",       data: [0, 0, totalVariableCost, totalVariableCost, totalVariableCost], backgroundColor: "#f08080" },
+        { label: "固定費",       data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a" },
+        { label: "利益",         data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa" },
+        { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed" },
+        // 作目別限界利益
         ...cropMargins.map((val, i) => ({
           label: `${cropNames[i]} 限界利益`,
-          data: [0, 0, 0, 0, val || 0],
+          data: [0, 0, 0, 0, val],
           backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5]
         }))
       ]
     },
     options: {
       plugins: {
-        legend: { display: false },
+        legend:  { display: false },
         datalabels: {
           color: "#000",
           font: { weight: "bold", size: 11 },
-          formatter: (value, ctx) => value ? `${ctx.dataset.label}\n${Math.round(value).toLocaleString()}円` : ""
+          formatter: (value, ctx) => value
+            ? `${ctx.dataset.label}\n${Math.round(value).toLocaleString()}円`
+            : ""
         },
         title: {
           display: true,
@@ -842,23 +879,21 @@ function drawStackedChart() {
     plugins: [ChartDataLabels]
   });
 
-  // 損益分岐点（安定版）
-  const cmRatio = revenue > 0 ? (margin / revenue) : 0;
-  const breakEvenRevenue = (cmRatio > 0) ? (fixedTotal / cmRatio) : 0;
+  // 損益分岐点計算
+  const cmRatio            = revenue > 0 ? (margin / revenue) : 0;
+  const breakEvenRevenue   = cmRatio > 0 ? (fixedTotal / cmRatio) : 0;
 
-  // 経営全体表へ反映（見出しは触らない）
+  // 経営全体表へ反映
   const setTxt = (id, val, frac = 0) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (frac > 0) {
-      el.textContent = Number(val).toLocaleString(undefined, { maximumFractionDigits: frac });
-    } else {
-      el.textContent = Math.round(Number(val)).toLocaleString();
-    }
+    el.textContent = frac > 0
+      ? Number(val).toLocaleString(undefined, { maximumFractionDigits: frac })
+      : Math.round(Number(val)).toLocaleString();
   };
 
   setTxt("sumSales",       totalSales);
-  setTxt("sumOtherIncome", totalOtherIncome);
+  setTxt("sumOtherIncome", totalOtherIncome);   // ← ここに正しい値が入るようになります
   setTxt("sumRevenue",     revenue);
   setTxt("sumVarCost",     totalVariableCost);
   setTxt("sumMargin",      margin);
@@ -867,9 +902,10 @@ function drawStackedChart() {
   setTxt("sumBreakEven",   breakEvenRevenue, 3);
 }
 
-// 入力系全部にイベントを付与＋初期描画
+// 入力変化で再描画
 document.querySelectorAll("input, select, textarea")
   .forEach(el => el.addEventListener("input", drawStackedChart));
+
 drawStackedChart();
 
 </script>
