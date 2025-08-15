@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
+
 <title>損益計算書からその他固定費を計算する表</title>
 <style>
 body {
@@ -187,6 +189,12 @@ button.copy-btn:active {
   </div>
 </div>
 
+<div style="margin-top:20px">
+  <input type="file" id="csvFile" accept=".csv">
+  <button onclick="downloadCsv()">CSV保存</button>
+</div>
+
+
 <script>
 const fmt = n => '¥' + (Number(n)||0).toLocaleString('ja-JP');
 
@@ -224,6 +232,75 @@ function copyFixedCost(){
 
 document.addEventListener('input', compute);
 compute();
+
+//SJIS保存
+function downloadCsv() {
+  const now = new Date();
+  const formattedDate = now.toLocaleDateString('ja-JP').replaceAll('/', '-');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const timeString = `${hours}${minutes}`;
+  const filename = `その他固定費_${formattedDate}_${timeString}.csv`;
+
+  let csv = "項目,金額（円）\n";
+
+  csv += `収入合計,${document.getElementById('totalRevenue').value}\n`;
+  csv += `所得（利益）,${document.getElementById('income').value}\n`;
+  csv += `臨時の収入,${document.getElementById('unexpectedIncome').value}\n`;
+  csv += `臨時の支出,${document.getElementById('unexpectedExpense').value}\n`;
+
+  document.querySelectorAll('#varTable tr').forEach(row => {
+    const label = row.children[0].textContent;
+    const value = row.children[1].querySelector('input').value;
+    csv += `${label},${value}\n`;
+  });
+
+  document.querySelectorAll('#fixedTable tr').forEach(row => {
+    const label = row.children[0].textContent;
+    const value = row.children[1].querySelector('input').value;
+    csv += `${label},${value}\n`;
+  });
+
+  csv += `その他固定費（計算結果）,${document.getElementById('fixedCost').dataset.raw || 0}\n`;
+
+  const sjisArray = Encoding.convert(Encoding.stringToCode(csv), 'SJIS', 'UNICODE');
+  const uint8Array = new Uint8Array(sjisArray);
+  const blob = new Blob([uint8Array], { type: "application/octet-stream" });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+//読み込み
+document.getElementById("csvFile").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const codes = Encoding.convert(new Uint8Array(e.target.result), 'UNICODE', 'SJIS');
+    const text = Encoding.codeToString(codes);
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+
+    lines.slice(1).forEach(line => {
+      const [label, value] = line.split(",");
+      const inputs = document.querySelectorAll("input");
+      inputs.forEach(inp => {
+        const parent = inp.closest("tr");
+        if (parent && parent.children[0].textContent.trim() === label.trim()) {
+          inp.value = value;
+        }
+      });
+    });
+
+    compute(); // 再計算
+  };
+  reader.readAsArrayBuffer(file);
+});
+
 
 </script>
 </body>

@@ -1,7 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=Shift_JIS">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
+
 <title>予想使用可能年数による固定資産台帳</title>
 <style>
 body {
@@ -273,16 +276,30 @@ document.getElementById("copyTotal").addEventListener("click", () => {
 document.getElementById("csvFile").addEventListener("change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = function(e) {
-    const lines = e.target.result.split("\n").map(l => l.trim()).filter(l => l);
+    // SJIS → Unicode変換
+    const sjisArray = new Uint8Array(e.target.result);
+    const unicodeArray = Encoding.convert(sjisArray, 'UNICODE', 'SJIS');
+    const text = Encoding.codeToString(unicodeArray);
+
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l);
     assets = lines.slice(1).map(line => {
       const [category,name,acqDate,price,years,dep,note] = line.split(",");
-      return {category, name, acqDate, price: parseInt(price) || 0, years: parseInt(years) || 0, dep: parseInt(dep) || null, note};
+      return {
+        category,
+        name,
+        acqDate,
+        price: parseInt(price) || 0,
+        years: parseInt(years) || 0,
+        dep: parseInt(dep) || null,
+        note
+      };
     });
     renderTable();
   };
-  reader.readAsText(file, "UTF-8");
+  reader.readAsArrayBuffer(file); // ← SJISはArrayBufferで読む必要あり
 });
 
 document.getElementById("downloadCsv").addEventListener("click", () => {
@@ -290,31 +307,26 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
   assets.forEach(a => {
     csv += [a.category, a.name, a.acqDate, a.price, a.years, a.dep || 0, a.note].join(",") + "\n";
   });
-  const blob = new Blob([csv], {type: "text/csv"});
-  const url = URL.createObjectURL(blob);
 
-  // ↓↓↓ ここから修正箇所 ↓↓↓
-  // 期末日の値を取得（未設定の場合は「未設定」を使用）
-  const periodEndValue = periodEndInput.value || "未設定";
+  // SJISエンコード（TextEncoderでは不可なので、BlobとMS独自APIを使う）
+  const sjisArray = Encoding.convert(Encoding.stringToCode(csv), 'SJIS', 'UNICODE');
+  const uint8Array = new Uint8Array(sjisArray);
+  const blob = new Blob([uint8Array], { type: "application/octet-stream" });
 
-  // 現在の時刻（時分）を取得し、フォーマット
   const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');   // 2桁表示（例: 09）
-  const minutes = now.getMinutes().toString().padStart(2, '0'); // 2桁表示（例: 05）
-  const timeString = `${hours}${minutes}`; // 例: "1435"
-
-  // ファイル名を構築: "予想使用可能年数の固定資産台帳_YYYY-MM-DD_HHMM.csv"
-  // このように時分を追加することで、ファイル名がユニークになり、
-  // ブラウザが自動的に連番（例: (3)）を付与する可能性が低くなります。
-  const filename = `予想使用可能年数の固定資産台帳_${periodEndValue}_${timeString}.csv`;
-  // ↑↑↑ ここまで修正箇所 ↑↑↑
+  const formattedDate = now.toLocaleDateString('ja-JP').replaceAll('/', '-');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const timeString = `${hours}${minutes}`;
+  const filename = `予想使用可能年数の固定資産台帳_${formattedDate}_${timeString}.csv`;
 
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
 });
+
 
 // 初期表示
 renderTable();

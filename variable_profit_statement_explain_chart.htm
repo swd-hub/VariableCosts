@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
 <title>変動損益計算書</title>
 <style>
 body {
@@ -561,25 +562,23 @@ function tableToCSV() {
 function downloadCSV() {
   const csvData = tableToCSV();
 
-  // 現在日時の取得
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
-
-  // ファイル名を作成（秒は入れない）
   const fileName = `変動損益計算書_${year}${month}${day}_${hours}${minutes}.csv`;
 
-  const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+  const sjisArray = Encoding.convert(Encoding.stringToCode(csvData), 'SJIS', 'UNICODE');
+  const uint8Array = new Uint8Array(sjisArray);
+  const blob = new Blob([uint8Array], { type: "application/octet-stream" });
+
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = fileName;
-  document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
 }
 
 function uploadCSV(event) {
@@ -588,47 +587,39 @@ function uploadCSV(event) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    const lines = e.target.result.split(/\r?\n/);
+    const codes = Encoding.convert(new Uint8Array(e.target.result), 'UNICODE', 'SJIS');
+    const text = Encoding.codeToString(codes);
+    const lines = text.split(/\r?\n/);
     let lineIndex = 0;
 
     document.querySelectorAll("table").forEach(table => {
-      const rows = table.rows; // caption も含む可能性があるので table.rows
+      const rows = table.rows;
       for(let r = 0; r < rows.length; r++) {
         const row = rows[r];
         const cells = row.querySelectorAll("th, td");
-        const values = (lines[lineIndex] || "").split(',').map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"')); // クォートとエスケープを除去
+        const values = (lines[lineIndex] || "").split(',').map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
 
         cells.forEach((cell, i) => {
           const input = cell.querySelector("input");
           if (input) {
             input.value = values[i] !== undefined ? values[i].trim() : "";
-          } else {
-            // inputがないセル（計算結果や見出しなど）は、必要に応じてtextContentを更新
-            // ただし、計算結果のセルは calculateFixedTotal() で更新されるため、ここでは不要な場合が多い
-            // 見出しセルのテキストは通常CSVから更新しない
-            // if (!cell.classList.contains("speak-on-hover") && cell.tagName.toLowerCase() !== 'th') {
-            //     cell.textContent = values[i] !== undefined ? values[i].trim() : "";
-            // }
           }
         });
         lineIndex++;
       }
-      lineIndex++; // 各テーブルの終わりに空行があるという前提
+      lineIndex++;
     });
 
-    // cropCountは addCrop でしか増えないため、CSVロードで作目が増えても自動で増えない
-    // ここでは既存の作目数で計算を再実行する
     for (let i = 1; i <= cropCount; i++) {
       calculateCrop(i);
     }
     calculateFixedTotal();
-    applySpeechAttributesToCells(); // ロードされたデータに基づいて音声属性を再付与
-    attachSpeechListeners(); // 音声イベントを再設定
+    applySpeechAttributesToCells();
+    attachSpeechListeners();
   };
 
-  reader.readAsText(file, "utf-8");
+  reader.readAsArrayBuffer(file);
 }
-
 
 
 // 音声説明のイベント設定
