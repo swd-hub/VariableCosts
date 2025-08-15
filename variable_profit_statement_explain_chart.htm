@@ -172,17 +172,6 @@ input[type="number"]:focus, input[type="text"]:focus {
 .speak-on-hover:hover::after {
   opacity: 1;
 }
-.tooltip-container {
-  position: relative;
-  overflow: visible;
-}
-.tooltip {
-  position: absolute;
-  top: -10px; /* 必要に応じて調整 */
-  left: 100%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
 
 /* 経営全体合計の列幅を安定させる */
 table#totalTable {
@@ -386,48 +375,6 @@ function addCrop() {
 }
 
 
-function renderCsvToTable(csvText, tableId) {
-  const rows = csvText.trim().split(/\r?\n/).map(line =>
-    line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
-  );
-
-  const table = document.getElementById(tableId);
-  if (!table) return;
-
-  // thead
-  let thead = table.querySelector('thead');
-  if (!thead) {
-    thead = document.createElement('thead');
-    table.appendChild(thead);
-  }
-  thead.innerHTML = '';
-  const headRow = document.createElement('tr');
-  rows[0].forEach(text => {
-    const th = document.createElement('th');
-    th.textContent = text;
-    headRow.appendChild(th);
-  });
-  thead.appendChild(headRow);
-
-  // tbody
-  let tbody = table.querySelector('tbody');
-  if (!tbody) {
-    tbody = document.createElement('tbody');
-    table.appendChild(tbody);
-  }
-  tbody.innerHTML = '';
-  for (let i = 1; i < rows.length; i++) {
-    const tr = document.createElement('tr');
-    rows[i].forEach(text => {
-      const td = document.createElement('td');
-      td.textContent = text || '–';
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  }
-}
-
-
 // totalTable の各行セル数を面積行に合わせる
 function syncTotalTable() {
   const totalTable = document.getElementById("totalTable");
@@ -485,22 +432,6 @@ function calculateCrop(colIndex) {
   marginCell.textContent = margin.toFixed(0);
   marginRateCell.textContent = marginRate.toFixed(1) + "%";
   calculateFixedTotal();
-}
-
-function setValByLabel(table, labelText, value) {
-  for (const row of table.rows) {
-    const labelCell = row.cells[0];
-    if (labelCell && labelCell.textContent.trim() === labelText) {
-      if (row.cells.length < 2) {
-        row.insertCell(1);
-      }
-      row.cells[1].textContent =
-        value !== null && value !== undefined && !isNaN(value)
-          ? value.toLocaleString()
-          : "–";
-      break;
-    }
-  }
 }
 
 

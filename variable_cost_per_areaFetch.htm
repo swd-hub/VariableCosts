@@ -161,7 +161,6 @@ button:hover {
 <div id="table2" style="display: none;"></div>
 
 <script>
-let masterData = {}; // 現在のコードでは未使用ですが、元のコードに合わせて残しています
 let priceData = {};
 let file2OriginalName = ''; // CSV保存時のファイル名に使用
 
@@ -549,21 +548,12 @@ function handleFile2Load(e) {
       // フォールバック処理のために行のコピーを作成
       const newRow = [...row];
 
-      // masterData が現在使われていないので、関連するロジックはコメントアウト。
-      // もし masterData が別の用途で必要なら有効にする。
-      // let fallback = {};
-      // if (name && masterData[name]) {
-      //   fallback = masterData[name];
-      // }
-
       // 元のCSV行のインデックスに直接値を設定するのではなく、新しい行のコピーに設定する
       if (currentUsageIndex !== -1) {
           newRow[currentUsageIndex] = (newRow[currentUsageIndex] || '').trim();
-          // newRow[currentUsageIndex] = newRow[currentUsageIndex] || (fallback.usage != null ? fallback.usage : '');
       }
       if (currentUnitIndex !== -1) {
           newRow[currentUnitIndex] = (newRow[currentUnitIndex] || '').trim();
-          // newRow[currentUnitIndex] = newRow[currentUnitIndex] || fallback.unit || '';
       }
 
       return newRow;
@@ -851,9 +841,3 @@ function getUnitConversionFactor(fromUnit, toUnit) {
   </script>
 </body>
 </html>
-
-
-
-
-
-
