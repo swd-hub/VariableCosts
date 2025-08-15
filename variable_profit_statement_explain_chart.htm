@@ -233,6 +233,8 @@ canvas {
   <button onclick="addCrop()">作目を追加</button>
   <button onclick="downloadCSV()">入力データ保存</button>
   <input type="file" accept=".csv" onchange="uploadCSV(event)">
+  <!-- ここに音声出力のトグルボタンを追加 -->
+  <button id="toggleSpeechButton">音声出力：オン</button> 
 </div>
 
 <!-- 作目別収入 -->
@@ -305,6 +307,8 @@ canvas {
 
 <script>
 let cropCount = 0;
+// 音声出力の状態を管理する変数
+let isSpeechEnabled = true; 
 
 function initCrops() {
   for (let i = 0; i < 5; i++) {
@@ -459,7 +463,7 @@ function calculateCrop(colIndex) {
   const yieldVal = getInputValue(yieldCell);
   const priceVal = getInputValue(priceCell);
   const otherIncome = getInputValue(otherIncomeCell);
-  const sales = yieldVal* priceVal;    //10a販売額か
+  const sales = yieldVal * priceVal;    //10a販売額か
   const totalIncome = sales + otherIncome;
   salesCell.textContent = sales.toFixed(0);
   totalIncomeCell.textContent = totalIncome.toFixed(0);
@@ -612,7 +616,7 @@ function tableToCSV() {
           val = cell.textContent;
         }
         if (val.includes(",") || val.includes("\n")) {
-          val = `"${val}"`;
+          val = `"${val.replace(/"/g, '""')}"`; // ダブルクォーテーションをエスケープ
         }
         rowData.push(val);
       });
@@ -653,33 +657,42 @@ function uploadCSV(event) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    const lines = e.target.result.split(/\r?\n/).filter(line => line.trim() !== "");
+    const lines = e.target.result.split(/\r?\n/);
     let lineIndex = 0;
 
     document.querySelectorAll("table").forEach(table => {
-      const rows = table.querySelectorAll("tbody tr, tr"); // tbody優先
-      rows.forEach(row => {
-        const cells = row.querySelectorAll("td, th");
-        const values = (lines[lineIndex] || "").split(",");
+      const rows = table.rows; // caption も含む可能性があるので table.rows
+      for(let r = 0; r < rows.length; r++) {
+        const row = rows[r];
+        const cells = row.querySelectorAll("th, td");
+        const values = (lines[lineIndex] || "").split(',').map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"')); // クォートとエスケープを除去
 
         cells.forEach((cell, i) => {
           const input = cell.querySelector("input");
           if (input) {
-            input.value = values[i] || "";
+            input.value = values[i] !== undefined ? values[i].trim() : "";
+          } else {
+            // inputがないセル（計算結果や見出しなど）は、必要に応じてtextContentを更新
+            // ただし、計算結果のセルは calculateFixedTotal() で更新されるため、ここでは不要な場合が多い
+            // 見出しセルのテキストは通常CSVから更新しない
+            // if (!cell.classList.contains("speak-on-hover") && cell.tagName.toLowerCase() !== 'th') {
+            //     cell.textContent = values[i] !== undefined ? values[i].trim() : "";
+            // }
           }
         });
-
         lineIndex++;
-      });
+      }
+      lineIndex++; // 各テーブルの終わりに空行があるという前提
     });
 
-    // ★ 各作目の再計算（cropCount が定義されている前提）
+    // cropCountは addCrop でしか増えないため、CSVロードで作目が増えても自動で増えない
+    // ここでは既存の作目数で計算を再実行する
     for (let i = 1; i <= cropCount; i++) {
       calculateCrop(i);
     }
-
-    // 固定費の合計なども再計算
     calculateFixedTotal();
+    applySpeechAttributesToCells(); // ロードされたデータに基づいて音声属性を再付与
+    attachSpeechListeners(); // 音声イベントを再設定
   };
 
   reader.readAsText(file, "utf-8");
@@ -690,15 +703,24 @@ function uploadCSV(event) {
 // 音声説明のイベント設定
 function attachSpeechListeners() {
   document.querySelectorAll('.speak-on-hover').forEach(el => {
-    el.addEventListener('mouseover', () => {
-      speechSynthesis.cancel(); // 前の発声をキャンセル
-      const utterance = new SpeechSynthesisUtterance(el.dataset.speech);
-      utterance.lang = "ja-JP";
-      utterance.rate = 1.6; // ← 読み上げ速度（1.0が標準、最大は10）
-      speechSynthesis.speak(utterance);
-    });
+    // 既存のイベントリスナーが重複しないように一度削除
+    el.removeEventListener('mouseover', handleMouseOverSpeech); 
+    // 新しい（または更新された）イベントリスナーを追加
+    el.addEventListener('mouseover', handleMouseOverSpeech);
   });
 }
+
+function handleMouseOverSpeech() {
+  if (!isSpeechEnabled) { // 音声が無効化されている場合は何もしない
+    return;
+  }
+  speechSynthesis.cancel(); // 前の発声をキャンセル
+  const utterance = new SpeechSynthesisUtterance(this.dataset.speech); // 'this' はイベント発生元の要素
+  utterance.lang = "ja-JP";
+  utterance.rate = 1.6; // ← 読み上げ速度（1.0が標準、最大は10）
+  speechSynthesis.speak(utterance);
+}
+
 
 // 初期読み込み時：表内に音声属性を追加
 const speechMap = {
@@ -708,6 +730,7 @@ const speechMap = {
   "限界利益（円）": "限界利益は、収入から変動費を引いた金額です",
   "10aその他収入（円）": "10アールその他収入は、面積に応じて変わる10アールのそのほかの収入です",
   "10a資材費（円）": "10アール資材費は、栽培こよみを見て計算した10アール分の資材費です",
+  "10a作業委託費（円）": "10アール作業委託費は、面積に応じて変わる作業委託費です。", // 追加
   "10aその他変動費（円）": "10アールその他変動費は、面積に応じて変わるそのほかの変動費です",
   "10a変動費計（円）": "変動費は、面積に応じて変わる費用です",
   "変動費計（円）": "変動費は、面積に応じて変わる費用です",
@@ -722,57 +745,54 @@ const speechMap = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll("table").forEach(table => {
-    table.querySelectorAll("tr").forEach(row => {
-      row.querySelectorAll("th, td").forEach(cell => {
-        const text = cell.textContent.trim();
-        if (speechMap[text]) {
-          cell.classList.add("speak-on-hover");
-          cell.dataset.speech = speechMap[text];
-        }
-      });
+  // 既存のセルに音声属性を追加
+  applySpeechAttributesToCells();
+  attachSpeechListeners(); // 初期リスナー設定
+
+  // 音声トグルボタンのイベントリスナー
+  const toggleSpeechButton = document.getElementById('toggleSpeechButton');
+  if (toggleSpeechButton) {
+    toggleSpeechButton.addEventListener('click', () => {
+      isSpeechEnabled = !isSpeechEnabled; // 状態を反転
+      if (!isSpeechEnabled) {
+        speechSynthesis.cancel(); // 音声を停止
+        toggleSpeechButton.textContent = "音声出力：オフ";
+        toggleSpeechButton.style.backgroundColor = "#ccc"; // オフ時のスタイル
+      } else {
+        toggleSpeechButton.textContent = "音声出力：オン";
+        toggleSpeechButton.style.backgroundColor = ""; // オン時のスタイル (CSSで定義されたデフォルト)
+      }
     });
-  });
-  attachSpeechListeners();
+  }
+
+  // input要素の変更を検知してグラフを再描画
+  document.querySelectorAll("input[type='number'], input[type='text'], select, textarea")
+    .forEach(el => el.addEventListener("input", drawStackedChart));
+  
+  // 初期ロード時にもグラフを確実に描画
+  // initCrops() の中で calculateFixedTotal() が呼ばれ、その中で drawStackedChart() も呼ばれるため、
+  // ここでの directな呼び出しは基本的に不要だが、安全策として残しても良い。
+  // 今回は calculateFixedTotal() が initCrops() から呼ばれるので、不要としてコメントアウトします。
+  // drawStackedChart(); 
 });
 
-
-// CSVファイル読み込み処理
-document.querySelector('input[type="file"]').addEventListener('change', function () {
-  const file = this.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    const lines = e.target.result.split(/\r?\n/);
-    let rowIndex = 0;
+// セルに音声属性を適用する関数
+function applySpeechAttributesToCells() {
     document.querySelectorAll("table").forEach(table => {
-      table.querySelectorAll("tr").forEach(row => {
-        const cells = row.querySelectorAll("th, td");
-        const values = (lines[rowIndex] || "").split(",");
-        cells.forEach((cell, i) => {
-          if (cell.querySelector("input")) {
-            cell.querySelector("input").value = values[i] || "";
-          } else {
-            cell.textContent = values[i] || "";
-          }
-
-          // 音声説明を再付与
-          const text = cell.textContent.trim();
-          if (speechMap[text]) {
-            cell.classList.add("speak-on-hover");
-            cell.dataset.speech = speechMap[text];
-          }
+        table.querySelectorAll("th, td").forEach(cell => { 
+            const text = cell.textContent.trim();
+            if (speechMap[text]) {
+                cell.classList.add("speak-on-hover");
+                cell.dataset.speech = speechMap[text];
+            } else {
+                // 音声説明がない場合はクラスとデータを削除 (念のため)
+                cell.classList.remove("speak-on-hover");
+                delete cell.dataset.speech;
+            }
         });
-        rowIndex++;
-      });
-      rowIndex++;
     });
-    calculateFixedTotal();
-    attachSpeechListeners(); // 音声イベントを再設定
-  };
+}
 
-  reader.readAsText(file);
-});
 
 //描画
 function drawStackedChart() {
@@ -817,10 +837,10 @@ function drawStackedChart() {
     const col     = idx + 1;
 
     // 各セルの値を取得
-    const sales10a       = getNum(getCellValue(cropRows, 2, col));
-    const otherInc10a    = getNum(getCellValue(cropRows, 3, col));
-    const varCost10a     = getNum(getCellValue(costRows, 3, col));
-    const margin10a      = getNum(getCellValue(costRows, 4, col));
+    const sales10a       = getNum(cropRows[2].cells[col]?.textContent); // salesCell.textContentから取得
+    const otherInc10a    = getNum(getCellValue(cropRows, 3, col)); // inputがあればinputから
+    const varCost10a     = getNum(costRows[3].cells[col]?.textContent); // totalCostCell.textContentから取得
+    const margin10a      = getNum(costRows[4].cells[col]?.textContent); // marginCell.textContentから取得
 
     totalSales        += sales10a * factor ;　/////////10a販売額
     totalOtherIncome  += otherInc10a * factor;
@@ -944,12 +964,6 @@ window.stackedChartInstance = new Chart(ctx, {
   setTxt("sumProfit",      profit);
   setTxt("sumBreakEven",   breakEvenRevenue);
 }
-
-// 入力変化で再描画
-document.querySelectorAll("input, select, textarea")
-  .forEach(el => el.addEventListener("input", drawStackedChart));
-
-drawStackedChart();
 
 </script>
 
