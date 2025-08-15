@@ -130,6 +130,13 @@ button.copy-btn:active {
 </head>
 <body>
 <div class="wrap">
+
+<div style="margin-top:20px">
+  <input type="file" id="csvFile" accept=".csv">
+  <button onclick="downloadCsv()">データ保存</button>
+  <br><br>
+</div>
+
   <h1>損益計算書からその他固定費を計算する表</h1>
 
   <div class="card">
@@ -187,11 +194,6 @@ button.copy-btn:active {
       </div>
     </div>
   </div>
-</div>
-
-<div style="margin-top:20px">
-  <input type="file" id="csvFile" accept=".csv">
-  <button onclick="downloadCsv()">CSV保存</button>
 </div>
 
 
