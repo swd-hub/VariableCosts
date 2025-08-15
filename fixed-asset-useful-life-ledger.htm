@@ -41,10 +41,10 @@ th, td {
   font-size: 20px;
 }
 th:first-child, td:first-child {
-  background: linear-gradient(to bottom, #f5f8fa, #e7ecef);
+ /* background: linear-gradient(to bottom, #f5f8fa, #e7ecef); */
   text-align: left;
   font-weight: 600;
-  width: 200px;
+  width: 100px;
 }
 thead th {
   background: linear-gradient(to bottom, #f0f3f5, #dfe4e7);
@@ -107,6 +107,13 @@ input:focus, select:focus {
 #filterCategory{
  font-size:20px;
 }
+#tableWrapper {
+  max-height: 60vh; /* 画面の60%まで表示 */
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
 </style>
 </head>
 <body>
@@ -123,33 +130,35 @@ input:focus, select:focus {
   <button id="copyTotal">コピー</button>
   <br><br>
   <button id="addRow">行追加</button>
-
 </div>
 
-<table id="assetTable">
-  <thead>
-    <tr>
-      <th>
-        資産区分<br>
-        <select id="filterCategory">
-          <option value="">全て</option>
-          <option value="機械">機械</option>
-          <option value="施設">施設</option>
-          <option value="建物">建物</option>
-          <option value="車両">車両</option>
-          <option value="生物">生物</option>
-        </select>
-      </th>
-      <th>名称</th>
-      <th>取得年月日</th>
-      <th>取得価額</th>
-      <th>予想使用可能年数</th>
-      <th>減価償却費</th>
-      <th>備考</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<!-- ✅ テーブルをスクロール可能にするラッパー -->
+<div id="tableWrapper">
+  <table id="assetTable">
+    <thead>
+      <tr>
+        <th>
+          資産区分<br>
+          <select id="filterCategory">
+            <option value="">全て</option>
+            <option value="機械">機械</option>
+            <option value="施設">施設</option>
+            <option value="建物">建物</option>
+            <option value="車両">車両</option>
+            <option value="生物">生物</option>
+          </select>
+        </th>
+        <th>名称</th>
+        <th>取得年月日</th>
+        <th>取得価額</th>
+        <th>予想使用可能年数</th>
+        <th>減価償却費</th>
+        <th>備考</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <script>
 let assets = [];
@@ -279,18 +288,20 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    // SJIS → Unicode変換
     const sjisArray = new Uint8Array(e.target.result);
     const unicodeArray = Encoding.convert(sjisArray, 'UNICODE', 'SJIS');
     const text = Encoding.codeToString(unicodeArray);
 
     const lines = text.split("\n").map(l => l.trim()).filter(l => l);
     assets = lines.slice(1).map(line => {
-      const [category,name,acqDate,price,years,dep,note] = line.split(",");
+      // 正規表現でCSVを安全に分割（カンマ区切り、ダブルクオート対応）
+      const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, "").trim()) || [];
+
+      const [category,name,acqDate,price,years,dep,note] = values;
       return {
         category,
         name,
-        acqDate,
+        acqDate: acqDate?.replace(/\//g, "-") || "", // yyyy/mm/dd → yyyy-mm-dd
         price: parseInt(price) || 0,
         years: parseInt(years) || 0,
         dep: parseInt(dep) || null,
@@ -299,8 +310,9 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
     });
     renderTable();
   };
-  reader.readAsArrayBuffer(file); // ← SJISはArrayBufferで読む必要あり
+  reader.readAsArrayBuffer(file);
 });
+
 
 document.getElementById("downloadCsv").addEventListener("click", () => {
   let csv = "資産区分,名称,取得年月日,取得価額,予想使用可能年数,減価償却費,備考\n";
