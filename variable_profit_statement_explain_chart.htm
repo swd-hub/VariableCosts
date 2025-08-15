@@ -220,11 +220,12 @@ canvas {
 <h1>変動損益計算書</h1>
 
 <div id="control">
-  <button onclick="addCrop()">作目を追加</button>
-  <button onclick="downloadCSV()">入力データ保存</button>
   <input type="file" accept=".csv" onchange="uploadCSV(event)">
-  <!-- ここに音声出力のトグルボタンを追加 -->
+    <button onclick="downloadCSV()">入力データ保存</button>  
+      <!-- ここに音声出力のトグルボタンを追加 -->
   <button id="toggleSpeechButton">音声出力：オン</button> 
+  <button onclick="addCrop()">作目を追加</button>
+  
 </div>
 
 <!-- 作目別収入 -->
