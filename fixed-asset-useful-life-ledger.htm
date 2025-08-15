@@ -4,18 +4,44 @@
 <meta charset="UTF-8">
 <title>予想使用可能年数による固定資産台帳</title>
 <style>
+/* bodyの初期設定 - 固定ヘッダー分のパディングはJSで追加 */
 body {
   font-family: 'Segoe UI', sans-serif;
   background-color: #f4f6f8;
   color: #333;
-  margin: 30px;
+  margin: 0 30px 30px 30px; /* 左右と下は30pxマージンを維持 */
+  padding-top: 0; /* JSで動的に設定される。初期値は0。 */
 }
+
+/* 固定される最上部エリアのスタイル */
+#top-fixed-area {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* bodyの左右マージン30pxを考慮し、このエリアにも左右に30pxのパディングを設ける */
+  padding: 20px 30px 10px 30px; /* 上20px, 左右30px, 下10px */
+  background-color: #f4f6f8; /* bodyと同じ背景色 */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* 下に影をつけて浮き上がらせる */
+  z-index: 1000; /* 最前面に表示 */
+}
+
+/* 固定エリア内のh1とcontrolのマージン調整 */
+#top-fixed-area h1 {
+  margin-top: 0; /* 親のpaddingでスペースを確保するため */
+  margin-bottom: 15px; /* controlとの間隔 */
+}
+#top-fixed-area #control {
+  margin-bottom: 0; /* 親のpaddingでスペースを確保するため */
+}
+
 h1 {
   font-size: 28px;
-  margin-bottom: 20px;
   color: #2c3e50;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
 }
+
+/* Table Styles */
 table {
   table-layout: fixed;
   border-collapse: collapse;
@@ -24,7 +50,6 @@ table {
   background: linear-gradient(to bottom, #ffffff, #f8fafc);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   border-radius: 6px;
-  overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 table:hover {
@@ -43,22 +68,32 @@ th:first-child, td:first-child {
   font-weight: 600;
   width: 200px;
 }
-thead th {
+
+/* テーブルヘッダー (<thead>) 全体の固定スタイル */
+thead {
+  position: sticky; /* THEAD全体をスクロール時に固定 */
+  top: 0; /* JavaScriptで動的に設定される */
+  z-index: 998; /* top-fixed-area (1000) より下、テーブル内容より上 */
+  /* スクロール時に背景が透けないように背景色を確保 */
   background: linear-gradient(to bottom, #f0f3f5, #dfe4e7);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1); /* わずかな影で区別しやすく */
+}
+
+/* TH内のスタイル（theadからsticky属性は削除） */
+thead th {
   font-weight: 600;
   text-align: center;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05); /* セルごとの影 */
 }
+
 tbody tr:hover {
   background: linear-gradient(to bottom, #f9fcff, #eef6ff);
 }
 select {
-  font-size: 20px; /* またはお好みのサイズに変更 */
+  font-size: 20px;
 }
-
-/* 今の入力欄スタイル */
 input[type="number"], input[type="text"] {
-  width: 100px;
+  width: 200px;
   padding: 4px 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -67,7 +102,6 @@ input[type="number"], input[type="text"] {
   box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-/* 期末日入力欄だけ幅を自動に戻す */
 input[type="date"] {
   width: auto;
   font-size: 18px;
@@ -76,9 +110,6 @@ input[type="date"] {
 input:focus, select:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(52,152,219,0.3), inset 1px 1px 3px rgba(0,0,0,0.05);
-}
-#control {
-  margin-bottom: 20px;
 }
 #control button {
   padding: 6px 12px;
@@ -108,20 +139,23 @@ input:focus, select:focus {
 </head>
 <body>
 
-<h1>予想使用可能年数による固定資産台帳</h1>
+<!-- 固定される最上部エリア -->
+<div id="top-fixed-area">
+  <h1>予想使用可能年数による固定資産台帳</h1>
 
-<div id="control">
-  <input type="file" id="csvFile" accept=".csv">
-  <button id="downloadCsv">データファイル保存</button>
-  期末日: <input type="date" id="periodEnd">
-  <br><br>
-  <button id="calcBtn">計算</button>
-  減価償却費合計: <span id="totalDep">0</span> 円
-  <button id="copyTotal">コピー</button>
-  <br><br>
-  <button id="addRow">行追加</button>
-
+  <div id="control">
+    <input type="file" id="csvFile" accept=".csv">
+    <button id="downloadCsv">データファイル保存</button>
+    期末日: <input type="date" id="periodEnd">
+    <br><br>
+    <button id="calcBtn">計算</button>
+    減価償却費合計: <span id="totalDep">0</span> 円
+    <button id="copyTotal">コピー</button>
+    <br><br>
+    <button id="addRow">行追加</button>
+  </div>
 </div>
+<!-- /固定される最上部エリア -->
 
 <table id="assetTable">
   <thead>
@@ -133,6 +167,7 @@ input:focus, select:focus {
           <option value="機械">機械</option>
           <option value="施設">施設</option>
           <option value="建物">建物</option>
+          <option value="車両">車両</option>
           <option value="生物">生物</option>
         </select>
       </th>
@@ -147,6 +182,9 @@ input:focus, select:focus {
   <tbody></tbody>
 </table>
 
+<!-- SJISエンコードのためのライブラリを読み込みます -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iconv-lite-umd/0.6.5/iconv-lite-umd.min.js"></script>
+
 <script>
 let assets = [];
 
@@ -154,6 +192,24 @@ const tableBody = document.querySelector("#assetTable tbody");
 const periodEndInput = document.getElementById("periodEnd");
 const totalDepSpan = document.getElementById("totalDep");
 const filterSelect = document.getElementById("filterCategory");
+
+// 固定ヘッダーの高さに基づいてレイアウトを調整する関数
+function adjustLayout() {
+  const topFixedArea = document.getElementById("top-fixed-area");
+  if (!topFixedArea) return;
+  const topFixedAreaHeight = topFixedArea.offsetHeight;
+
+  document.body.style.paddingTop = `${topFixedAreaHeight + 30}px`;
+
+  const thead = document.querySelector("#assetTable thead");
+  if (thead) {
+    thead.style.top = `${topFixedAreaHeight}px`;
+  }
+}
+
+// ページのロード時とウィンドウのリサイズ時にレイアウト調整を実行
+window.addEventListener("load", adjustLayout);
+window.addEventListener("resize", adjustLayout);
 
 function renderTable() {
   tableBody.innerHTML = "";
@@ -167,7 +223,7 @@ function renderTable() {
     // 資産区分
     const tdCat = document.createElement("td");
     const selCat = document.createElement("select");
-    ["機械","施設","建物","生物"].forEach(cat => {
+    ["機械","施設","建物","車両","生物"].forEach(cat => {
       const opt = document.createElement("option");
       opt.value = cat;
       opt.textContent = cat;
@@ -279,6 +335,7 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
     });
     renderTable();
   };
+  // CSVファイルをUTF-8として読み込むことを明示
   reader.readAsText(file, "UTF-8");
 });
 
@@ -287,10 +344,48 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
   assets.forEach(a => {
     csv += [a.category, a.name, a.acqDate, a.price, a.years, a.dep || 0, a.note].join(",") + "\n";
   });
-  const blob = new Blob([csv], {type: "text/csv"});
+
+  // ========== ここからSJISエンコードのための修正 ==========
+  // iconv-lite がグローバル変数 'iconv' として利用可能であることを前提
+  if (typeof iconv === 'undefined') {
+    alert("SJISエンコードのためのライブラリが読み込まれていません。インターネット接続を確認してください。UTF-8でダウンロードします。");
+    // SJISエンコードができない場合はUTF-8でダウンロードするフォールバック
+    const utf8Blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+    const utf8Url = URL.createObjectURL(utf8Blob);
+    const periodEndValue = periodEndInput.value || "未設定";
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const timeString = `${hours}${minutes}`;
+    const filename = `予想使用可能年数の固定資産台帳_${periodEndValue}_${timeString}_UTF8.csv`; // UTF8と明示
+    const a = document.createElement("a");
+    a.href = utf8Url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(utf8Url);
+    return;
+  }
+
+  // UTF-8文字列をShift_JISのUint8Arrayに変換
+  const sjisBytes = iconv.encode(csv, 'Shift_JIS');
+
+  // Blobを作成。MIMEタイプにcharset=Shift_JISを指定することが重要
+  const blob = new Blob([sjisBytes], {type: "text/csv;charset=Shift_JIS"});
   const url = URL.createObjectURL(blob);
-  const periodEnd = periodEndInput.value || "未設定";
-  const filename = `予想使用可能年数の固定資産台帳_${periodEnd}.csv`;
+  // ========== SJISエンコードのための修正ここまで ==========
+
+  // 期末日の値を取得（未設定の場合は「未設定」を使用）
+  const periodEndValue = periodEndInput.value || "未設定";
+
+  // 現在の時刻（時分）を取得し、フォーマット
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const timeString = `${hours}${minutes}`;
+
+  // ファイル名を構築
+  const filename = `予想使用可能年数の固定資産台帳_${periodEndValue}_${timeString}.csv`;
+
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -298,6 +393,7 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+// 初期表示
 renderTable();
 </script>
 </body>
