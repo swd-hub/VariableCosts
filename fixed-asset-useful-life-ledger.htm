@@ -283,10 +283,11 @@ document.getElementById("addRow").addEventListener("click", () => {
 
 filterSelect.addEventListener("change", renderTable);
 
+/*
 document.getElementById("copyTotal").addEventListener("click", () => {
   navigator.clipboard.writeText(totalDepSpan.textContent.replace(/,/g,""));
   alert("減価償却費合計をコピーしました");
-});
+}); */
 
 document.getElementById("csvFile").addEventListener("change", function(e) {
   const file = e.target.files[0];
@@ -348,19 +349,6 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
 // 初期表示
 renderTable();
 
-function copyDepreciationTotal(){
-  const match = document.body.textContent.match(/減価償却費合計:\\s*([\\d,]+)\\s*円/);
-  if (match) {
-    const rawValue = match[1].replace(/,/g, "");
-    localStorage.setItem("depreciationTotalValue", rawValue); // ← コピー時に保存
-    navigator.clipboard.writeText(rawValue)
-      .then(() => alert("減価償却費合計をコピーしました"))
-      .catch(() => alert("コピーに失敗しました"));
-  }
-}
-
-
-//データ移動
 function copyDepreciationTotal() {
   const span = document.getElementById("totalDep");
   const rawValue = span.textContent.replace(/,/g, "").trim();

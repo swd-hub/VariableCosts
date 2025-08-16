@@ -282,6 +282,7 @@ canvas {
 </table>
 
 <button id="importFixedCosts">データ取り込み</button>
+
 <br><br>
 <!-- 経営全体 -->
 <table class="summary-table">
@@ -484,14 +485,19 @@ function calculateFixedTotal() {
   const totalMargin = totalRevenue - totalVariableCost;
   const marginRate = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
 
-  // 固定費を <td> から取得
+  // 固定費を <input> または <td> から取得
   const getFixedCost = labelText => {
     const rows = document.querySelectorAll("table tr");
     for (const row of rows) {
       const labelCell = row.children[0];
       const valueCell = row.children[1];
       if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
-        return parseFloat(valueCell.textContent.replace(/,/g, "")) || 0;
+        const input = valueCell.querySelector("input");
+        if (input) {
+          return parseFloat(input.value) || 0;
+        } else {
+          return parseFloat(valueCell.textContent.replace(/,/g, "")) || 0;
+        }
       }
     }
     return 0;
@@ -506,11 +512,15 @@ function calculateFixedTotal() {
   const profit = totalMargin - fixedTotal;
   const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
 
-  // 固定費合計の表示（安定版）
-  const fixedTotalSpan = document.getElementById("fixedTotal");
-  if (fixedTotalSpan) {
-    fixedTotalSpan.textContent = fixedTotal.toLocaleString();
-  }
+  // 表の「固定費計（円）」セルも更新する
+  const fixedCostRows = document.querySelectorAll("table tr");
+  fixedCostRows.forEach(row => {
+    const labelCell = row.children[0];
+    const valueCell = row.children[1];
+    if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
+      valueCell.textContent = fixedTotal.toLocaleString();
+    }
+  });
 
   // 経営全体テーブル更新
   const managementTable = document.getElementById("managementSummary");
@@ -546,6 +556,7 @@ function calculateFixedTotal() {
 
   drawStackedChart();
 }
+
 
 
 // CSV出力
@@ -922,6 +933,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 //データ取り込み
+// データ取り込み
 function importFixedCostsFromStorage() {
   const applyValueToCell = (storageKey, labelText) => {
     const value = localStorage.getItem(storageKey);
@@ -931,20 +943,68 @@ function importFixedCostsFromStorage() {
         const labelCell = row.children[0];
         const valueCell = row.children[1];
         if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
-          valueCell.textContent = parseInt(value).toLocaleString();
+          const input = valueCell.querySelector("input");
+          if (input) {
+            input.value = parseInt(value);
+          } else {
+            valueCell.textContent = parseInt(value).toLocaleString();
+          }
         }
       });
     }
   };
 
-  applyValueToCell("otherFixedCostValue", "その他固定費（円）");
+  // すべての固定費項目を取り込む
+  applyValueToCell("laborCostValue", "人件費（円）");
   applyValueToCell("depreciationTotalValue", "減価償却費（円）");
+  applyValueToCell("landRentCostValue", "支払地代（円）");
+  applyValueToCell("otherFixedCostValue", "その他固定費（円）");
+
+  // 固定費計（円）を再計算して表示
+  const getFixedCost = label => {
+    const rows = document.querySelectorAll("table tr");
+    for (const row of rows) {
+      const labelCell = row.children[0];
+      const valueCell = row.children[1];
+      if (labelCell && valueCell && labelCell.textContent.trim() === label) {
+        const input = valueCell.querySelector("input");
+        if (input) {
+          return parseInt(input.value.replace(/,/g, ""), 10) || 0;
+        } else {
+          return parseInt(valueCell.textContent.replace(/,/g, ""), 10) || 0;
+        }
+      }
+    }
+    return 0;
+  };
+
+  const labor        = getFixedCost("人件費（円）");
+  const depreciation = getFixedCost("減価償却費（円）");
+  const landRent     = getFixedCost("支払地代（円）");
+  const otherFixed   = getFixedCost("その他固定費（円）");
+  const fixedTotal   = labor + depreciation + landRent + otherFixed;
+
+  // 表の「固定費計（円）」セルを更新
+  const rows = document.querySelectorAll("table tr");
+  rows.forEach(row => {
+    const labelCell = row.children[0];
+    const valueCell = row.children[1];
+    if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
+      const input = valueCell.querySelector("input");
+      if (input) {
+        input.value = fixedTotal;
+      } else {
+        valueCell.textContent = fixedTotal.toLocaleString();
+      }
+    }
+  });
+
+  calculateFixedTotal(); // 経営全体の再計算
 
   alert("固定費データを取り込みました");
 }
 
 document.getElementById("importFixedCosts").addEventListener("click", importFixedCostsFromStorage);
-
 
 
 </script>
