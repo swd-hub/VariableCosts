@@ -225,12 +225,15 @@ function compute(){
   document.getElementById('fixedCost').dataset.raw = Math.round(otherFixedCost); // コピー用に生の数値を保持
 }
 
+
 function copyFixedCost(){
   const rawValue = document.getElementById('fixedCost').dataset.raw || "0";
+  localStorage.setItem("otherFixedCostValue", rawValue); // ← コピー時に保存
   navigator.clipboard.writeText(rawValue)
     .then(() => alert('その他固定費の数値をコピーしました'))
     .catch(() => alert('コピーに失敗しました'));
 }
+
 
 document.addEventListener('input', compute);
 compute();
@@ -301,6 +304,17 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
     compute(); // 再計算
   };
   reader.readAsArrayBuffer(file);
+});
+
+//自動貼付
+function saveFixedCostToStorage(){
+  const rawValue = document.getElementById('fixedCost').dataset.raw || "0";
+  localStorage.setItem("otherFixedCostValue", rawValue);
+}
+
+document.addEventListener('input', () => {
+  compute();
+  saveFixedCostToStorage(); // 入力のたびに保存
 });
 
 

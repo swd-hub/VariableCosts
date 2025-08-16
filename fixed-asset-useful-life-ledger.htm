@@ -127,7 +127,7 @@ input:focus, select:focus {
   <br><br>
   <button id="calcBtn">計算</button>
   減価償却費合計: <span id="totalDep">0</span> 円
-  <button id="copyTotal">コピー</button>
+  <button id="copyTotal" onclick="copyDepreciationTotal()">コピー</button>
   <br><br>
   <button id="addRow">行追加</button>
 </div>
@@ -261,6 +261,12 @@ function calcDep(asset) {
 }
 
 document.getElementById("calcBtn").addEventListener("click", () => {
+  const periodEnd = periodEndInput.value;
+  if (!periodEnd) {
+    alert("期末日が未入力です。期末日を選択してください。");
+    return; // 処理中断
+  }
+
   let totalDep = 0;
   assets.forEach(a => {
     a.dep = calcDep(a);
@@ -339,9 +345,48 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
   URL.revokeObjectURL(a.href);
 });
 
-
 // 初期表示
 renderTable();
+
+function copyDepreciationTotal(){
+  const match = document.body.textContent.match(/減価償却費合計:\\s*([\\d,]+)\\s*円/);
+  if (match) {
+    const rawValue = match[1].replace(/,/g, "");
+    localStorage.setItem("depreciationTotalValue", rawValue); // ← コピー時に保存
+    navigator.clipboard.writeText(rawValue)
+      .then(() => alert("減価償却費合計をコピーしました"))
+      .catch(() => alert("コピーに失敗しました"));
+  }
+}
+
+
+//データ移動
+function copyDepreciationTotal() {
+  const span = document.getElementById("totalDep");
+  const rawValue = span.textContent.replace(/,/g, "").trim();
+  if (!isNaN(rawValue) && rawValue !== "") {
+    localStorage.setItem("depreciationTotalValue", rawValue);
+    navigator.clipboard.writeText(rawValue)
+      .then(() => alert("減価償却費合計をコピーしました"))
+      .catch(() => alert("コピーに失敗しました"));
+  } else {
+    alert("減価償却費が未計算です。先に『計算』ボタンを押してください。");
+  }
+}
+
+//自動貼り付け
+function saveDepreciationToStorage() {
+  const match = document.body.textContent.match(/減価償却費合計:\s*([\d,]+)\s*円/);
+  if (match) {
+    const rawValue = match[1].replace(/,/g, "");
+    localStorage.setItem("depreciationTotalValue", rawValue);
+  }
+}
+
+// ページ読み込み時に保存
+window.addEventListener("DOMContentLoaded", saveDepreciationToStorage);
+
+
 </script>
 </body>
 </html>

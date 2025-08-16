@@ -460,14 +460,13 @@ function calculateFixedTotal() {
     const area = parseFloat(input.value) || 0;
     const colIndex = idx + 1;
 
-    const income10a = parseFloat(cropRows[4].cells[colIndex]?.textContent) || 0;
-    const cost10a   = parseFloat(costRows[3].cells[colIndex]?.textContent) || 0;
+    const income10a = parseFloat(cropRows[4].cells[colIndex]?.textContent.replace(/,/g, "")) || 0;
+    const cost10a   = parseFloat(costRows[3].cells[colIndex]?.textContent.replace(/,/g, "")) || 0;
 
-    const factor = area /10;
+    const factor = area / 10;
 
-    const revenue = income10a * factor; ////////////////////////////////////10a販売額
-    
-    const vcost   = cost10a   * factor;
+    const revenue = income10a * factor;
+    const vcost   = cost10a * factor;
     const margin  = revenue - vcost;
     const mrRate  = revenue > 0 ? (margin / revenue) * 100 : 0;
 
@@ -483,23 +482,38 @@ function calculateFixedTotal() {
   const totalMargin = totalRevenue - totalVariableCost;
   const marginRate = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
 
-  const labor = parseFloat(document.getElementById("laborCost").value) || 0;
-  const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
-  const landRent = parseFloat(document.getElementById("landRent").value) || 0;
-  const otherFixed = parseFloat(document.getElementById("otherFixed").value) || 0;
-  const fixedTotal = labor + depreciation + landRent + otherFixed;
+  // 固定費を <td> から取得
+  const getFixedCost = labelText => {
+    const rows = document.querySelectorAll("table tr");
+    for (const row of rows) {
+      const labelCell = row.children[0];
+      const valueCell = row.children[1];
+      if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
+        return parseFloat(valueCell.textContent.replace(/,/g, "")) || 0;
+      }
+    }
+    return 0;
+  };
+
+  const labor        = getFixedCost("人件費（円）");
+  const depreciation = getFixedCost("減価償却費（円）");
+  const landRent     = getFixedCost("支払地代（円）");
+  const otherFixed   = getFixedCost("その他固定費（円）");
+  const fixedTotal   = labor + depreciation + landRent + otherFixed;
 
   const profit = totalMargin - fixedTotal;
   const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
 
-
   // 固定費合計の表示
-  document.getElementById("fixedTotal").textContent = fixedTotal.toLocaleString();
+  const fixedTotalCell = document.querySelector("table tr td:has(span#fixedTotal)");
+  if (fixedTotalCell) {
+    const span = fixedTotalCell.querySelector("#fixedTotal");
+    if (span) span.textContent = fixedTotal.toLocaleString();
+  }
 
-  // ===== 経営全体テーブル更新（安全版） =====
+  // 経営全体テーブル更新
   const managementTable = document.querySelectorAll(".summary-table")[1];
   if (managementTable) {
-    // セルを安全にセットする関数
     const setVal = (rowIndex, value) => {
       if (managementTable.rows[rowIndex].cells.length < 2) {
         managementTable.rows[rowIndex].insertCell(1);
@@ -510,7 +524,6 @@ function calculateFixedTotal() {
           : "–";
     };
 
-    // その他収入集計
     const totalOtherIncome = Array.from(areaInputs).reduce((sum, input, idx) => {
       const colIndex = idx + 1;
       const otherIncome10a = parseFloat(cropRows[3].cells[colIndex]?.querySelector("input")?.value) || 0;
@@ -518,10 +531,8 @@ function calculateFixedTotal() {
       return sum + (otherIncome10a * (area / 10));
     }, 0);
 
-    // 販売額 = 総収入 - その他収入
     const totalSales = totalRevenue - totalOtherIncome;
 
-    // 経営全体の各行を更新
     setVal(0, totalSales);                          // 販売額
     setVal(1, totalOtherIncome);                    // その他収入
     setVal(2, totalRevenue);                        // 収入
@@ -534,6 +545,7 @@ function calculateFixedTotal() {
 
   drawStackedChart();
 }
+
 
 // CSV出力
 function tableToCSV() {
@@ -888,9 +900,26 @@ window.stackedChartInstance = new Chart(ctx, {
   setTxt("sumBreakEven",   breakEvenRevenue);
 }
 
+//自動貼付
+function applyValueToCell(storageKey, labelText) {
+  const value = localStorage.getItem(storageKey);
+  if (value !== null) {
+    const rows = document.querySelectorAll("table tr");
+    rows.forEach(row => {
+      const labelCell = row.children[0];
+      const valueCell = row.children[1];
+      if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
+        valueCell.textContent = parseInt(value).toLocaleString(); // 表示形式に整える
+      }
+    });
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  applyValueToCell("otherFixedCostValue", "その他固定費（円）");
+  applyValueToCell("depreciationTotalValue", "減価償却費（円）");
+});
+
 </script>
-
-
 </body>
-
 </html>
