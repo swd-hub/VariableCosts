@@ -281,6 +281,8 @@ canvas {
   <tr><th>固定費計（円）</th><td id="fixedTotal">–</td></tr>
 </table>
 
+<button id="importFixedCosts">データ取り込み</button>
+<br><br>
 <!-- 経営全体 -->
 <table class="summary-table">
   <caption>経営全体</caption>
@@ -504,15 +506,14 @@ function calculateFixedTotal() {
   const profit = totalMargin - fixedTotal;
   const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
 
-  // 固定費合計の表示
-  const fixedTotalCell = document.querySelector("table tr td:has(span#fixedTotal)");
-  if (fixedTotalCell) {
-    const span = fixedTotalCell.querySelector("#fixedTotal");
-    if (span) span.textContent = fixedTotal.toLocaleString();
+  // 固定費合計の表示（安定版）
+  const fixedTotalSpan = document.getElementById("fixedTotal");
+  if (fixedTotalSpan) {
+    fixedTotalSpan.textContent = fixedTotal.toLocaleString();
   }
 
   // 経営全体テーブル更新
-  const managementTable = document.querySelectorAll(".summary-table")[1];
+  const managementTable = document.getElementById("managementSummary");
   if (managementTable) {
     const setVal = (rowIndex, value) => {
       if (managementTable.rows[rowIndex].cells.length < 2) {
@@ -919,6 +920,32 @@ window.addEventListener("DOMContentLoaded", () => {
   applyValueToCell("otherFixedCostValue", "その他固定費（円）");
   applyValueToCell("depreciationTotalValue", "減価償却費（円）");
 });
+
+//データ取り込み
+function importFixedCostsFromStorage() {
+  const applyValueToCell = (storageKey, labelText) => {
+    const value = localStorage.getItem(storageKey);
+    if (value !== null) {
+      const rows = document.querySelectorAll("table tr");
+      rows.forEach(row => {
+        const labelCell = row.children[0];
+        const valueCell = row.children[1];
+        if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
+          valueCell.textContent = parseInt(value).toLocaleString();
+        }
+      });
+    }
+  };
+
+  applyValueToCell("otherFixedCostValue", "その他固定費（円）");
+  applyValueToCell("depreciationTotalValue", "減価償却費（円）");
+
+  alert("固定費データを取り込みました");
+}
+
+document.getElementById("importFixedCosts").addEventListener("click", importFixedCostsFromStorage);
+
+
 
 </script>
 </body>
