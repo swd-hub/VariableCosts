@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
 
-  <title>単位面積あたり生産費計算</title>
+  <title>単位面積あたり変動費計算</title>
   <style>
 body {
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -134,7 +134,7 @@ button:hover {
   </style>
 </head>
 <body>
-  <h1>単位面積あたり生産費計算ツール</h1>
+  <h1>単位面積あたり変動費計算ツール</h1>
 
   <p>資材価格データ（品名,容量,単位,予約価格）.CSV:</p>
   <input type="file" id="file1" accept=".csv" />
@@ -754,10 +754,10 @@ function saveTable2SelectedToCSV() {
   };
 
   // 保存するヘッダーを指定
-  const selectedHeader = ['品名', '１０アール量', '単位', '回数'];
-  if (idx.remark !== -1) { // 備考列が存在する場合のみ追加
+  const selectedHeader = ['品名', '１０アール量', '単位', '回数','備考'];
+ /* if (idx.remark !== -1) { // 備考列が存在する場合のみ追加
     selectedHeader.push('備考');
-  }
+  } */
 
   const csvRows = [selectedHeader];
 
