@@ -168,6 +168,15 @@ const periodEndInput = document.getElementById("periodEnd");
 const totalDepSpan = document.getElementById("totalDep");
 const filterSelect = document.getElementById("filterCategory");
 
+function normalizeDate(dateStr) {
+  const parts = dateStr.split(/[-/]/);
+  if (parts.length !== 3) return "";
+  const yyyy = parts[0].padStart(4, '0');
+  const mm = parts[1].padStart(2, '0');
+  const dd = parts[2].padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function renderTable() {
   tableBody.innerHTML = "";
   const filterCat = filterSelect.value;
@@ -177,7 +186,6 @@ function renderTable() {
 
     const tr = document.createElement("tr");
 
-    // 資産区分
     const tdCat = document.createElement("td");
     const selCat = document.createElement("select");
     ["機械","施設","建物","車両","生物"].forEach(cat => {
@@ -191,7 +199,6 @@ function renderTable() {
     tdCat.appendChild(selCat);
     tr.appendChild(tdCat);
 
-    // 名称
     const tdName = document.createElement("td");
     const inpName = document.createElement("input");
     inpName.type = "text";
@@ -200,7 +207,6 @@ function renderTable() {
     tdName.appendChild(inpName);
     tr.appendChild(tdName);
 
-    // 取得年月日
     const tdDate = document.createElement("td");
     const inpDate = document.createElement("input");
     inpDate.type = "date";
@@ -209,7 +215,6 @@ function renderTable() {
     tdDate.appendChild(inpDate);
     tr.appendChild(tdDate);
 
-    // 取得価額
     const tdPrice = document.createElement("td");
     const inpPrice = document.createElement("input");
     inpPrice.type = "number";
@@ -219,7 +224,6 @@ function renderTable() {
     tdPrice.appendChild(inpPrice);
     tr.appendChild(tdPrice);
 
-    // 使用可能年数
     const tdYears = document.createElement("td");
     const inpYears = document.createElement("input");
     inpYears.type = "number";
@@ -229,12 +233,10 @@ function renderTable() {
     tdYears.appendChild(inpYears);
     tr.appendChild(tdYears);
 
-    // 減価償却費
     const tdDep = document.createElement("td");
     tdDep.textContent = asset.dep != null ? asset.dep.toLocaleString() : "";
     tr.appendChild(tdDep);
 
-    // 備考
     const tdNote = document.createElement("td");
     const inpNote = document.createElement("input");
     inpNote.type = "text";
@@ -254,8 +256,6 @@ function calcDep(asset) {
   const acqDate = new Date(asset.acqDate);
   const endYear = acqDate.getFullYear() + asset.years;
   const depreciation = Math.floor(asset.price / asset.years);
-  // 期末日が予想使用可能年数を超えていれば、減価償却費は0
-  // ここでの「超えている」の判断は、期末日の年が資産の償却終了年を超えているかで判断
   if (end.getFullYear() >= endYear) return 0;
   return depreciation;
 }
@@ -264,7 +264,7 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   const periodEnd = periodEndInput.value;
   if (!periodEnd) {
     alert("期末日が未入力です。期末日を選択してください。");
-    return; // 処理中断
+    return;
   }
 
   let totalDep = 0;
@@ -283,12 +283,6 @@ document.getElementById("addRow").addEventListener("click", () => {
 
 filterSelect.addEventListener("change", renderTable);
 
-/*
-document.getElementById("copyTotal").addEventListener("click", () => {
-  navigator.clipboard.writeText(totalDepSpan.textContent.replace(/,/g,""));
-  alert("減価償却費合計をコピーしました");
-}); */
-
 document.getElementById("csvFile").addEventListener("change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -301,14 +295,13 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
 
     const lines = text.split("\n").map(l => l.trim()).filter(l => l);
     assets = lines.slice(1).map(line => {
-      // 正規表現でCSVを安全に分割（カンマ区切り、ダブルクオート対応）
       const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, "").trim()) || [];
-
-      const [category,name,acqDate,price,years,dep,note] = values;
+      const [category, name, rawAcqDate, price, years, dep, note] = values;
+      const acqDate = normalizeDate(rawAcqDate);
       return {
         category,
         name,
-        acqDate: acqDate?.replace(/\//g, "-") || "", // yyyy/mm/dd → yyyy-mm-dd
+        acqDate: acqDate || "",
         price: parseInt(price) || 0,
         years: parseInt(years) || 0,
         dep: parseInt(dep) || null,
@@ -320,14 +313,12 @@ document.getElementById("csvFile").addEventListener("change", function(e) {
   reader.readAsArrayBuffer(file);
 });
 
-
 document.getElementById("downloadCsv").addEventListener("click", () => {
   let csv = "資産区分,名称,取得年月日,取得価額,予想使用可能年数,減価償却費,備考\n";
   assets.forEach(a => {
     csv += [a.category, a.name, a.acqDate, a.price, a.years, a.dep || 0, a.note].join(",") + "\n";
   });
 
-  // SJISエンコード（TextEncoderでは不可なので、BlobとMS独自APIを使う）
   const sjisArray = Encoding.convert(Encoding.stringToCode(csv), 'SJIS', 'UNICODE');
   const uint8Array = new Uint8Array(sjisArray);
   const blob = new Blob([uint8Array], { type: "application/octet-stream" });
@@ -346,7 +337,6 @@ document.getElementById("downloadCsv").addEventListener("click", () => {
   URL.revokeObjectURL(a.href);
 });
 
-// 初期表示
 renderTable();
 
 function copyDepreciationTotal() {
@@ -362,7 +352,6 @@ function copyDepreciationTotal() {
   }
 }
 
-//自動貼り付け
 function saveDepreciationToStorage() {
   const match = document.body.textContent.match(/減価償却費合計:\s*([\d,]+)\s*円/);
   if (match) {
@@ -371,10 +360,8 @@ function saveDepreciationToStorage() {
   }
 }
 
-// ページ読み込み時に保存
 window.addEventListener("DOMContentLoaded", saveDepreciationToStorage);
-
-
 </script>
+
 </body>
 </html>
