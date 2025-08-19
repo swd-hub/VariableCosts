@@ -1089,17 +1089,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-//データ取り込み
+// データ取り込み
 function importFixedCostsFromStorage() {
   const applyValueToSpecificFixedCostCell = (storageKey, labelText) => {
     const value = localStorage.getItem(storageKey);
     if (value !== null) {
       let fixedCostTable = null;
-        document.querySelectorAll(".summary-table").forEach(table => {
-            if (table.caption && table.caption.textContent.trim() === "固定費") {
-                fixedCostTable = table;
-            }
-        });
+      document.querySelectorAll(".summary-table").forEach(table => {
+        if (table.caption && table.caption.textContent.trim() === "固定費") {
+          fixedCostTable = table;
+        }
+      });
       if (!fixedCostTable) return;
 
       fixedCostTable.querySelectorAll("tr").forEach(row => {
@@ -1118,13 +1118,14 @@ function importFixedCostsFromStorage() {
   // すべての固定費項目を取り込む
   applyValueToSpecificFixedCostCell("laborCostValue", "人件費（円）");
   applyValueToSpecificFixedCostCell("depreciationTotalValue", "減価償却費（円）");
-  applyValueToSpecificFixedCostCell("landRentCostValue", "支払地代（円）");
+  applyValueToSpecificFixedCostCell("landRentValue", "支払地代（円）");  // ← 修正
   applyValueToSpecificFixedCostCell("otherFixedCostValue", "その他固定費（円）");
 
   calculateFixedTotal(); // 固定費を取り込んだ後、全体の再計算と表示更新
 
   alert("固定費データを取り込みました");
 }
+
 
 
 </script>

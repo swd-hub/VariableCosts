@@ -145,7 +145,7 @@ button.copy-btn:active {
         <th>項目</th><th class="right">金額（円）</th>
       </tr>
       <tr>
-        <td>収入合計（交付金含む）</td>
+        <td>収入合計</td>
         <td class="right"><input id="totalRevenue" type="number" step="1" value="0"></td>
       </tr>
       <tr>
@@ -164,7 +164,6 @@ button.copy-btn:active {
 
     <h3 style="margin-top:16px;margin-bottom:8px;font-size:20px">面積に応じて変動する費用（変動費）の内訳</h3>
     <table id="varTable">
-      <tr><td>種苗費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>肥料費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>農薬費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>資材費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
@@ -182,7 +181,6 @@ button.copy-btn:active {
     <h3 style="margin-top:16px;margin-bottom:8px;font-size:20px">固定費の費目</h3>
     <table id="fixedTable">
 	  <tr><td>人件費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
-　　　<h5>人件費＝給与手当＋賞与＋雑給＋福利厚生費＋法定福利費＋役員報酬</h5>
 	  <tr><td>法定耐用年数による減価償却費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
 	  <tr><td>支払地代</td><td class="right"><input type="number" step="1" value="0"></td></tr>
 　　</table>
@@ -228,13 +226,27 @@ function compute(){
 }
 
 
-function copyFixedCost(){
-  const rawValue = document.getElementById('fixedCost').dataset.raw || "0";
-  localStorage.setItem("otherFixedCostValue", rawValue); // ← コピー時に保存
-  navigator.clipboard.writeText(rawValue)
-    .then(() => alert('その他固定費の数値をコピーしました'))
+function copyFixedCost() {
+  const rawOtherFixed = document.getElementById('fixedCost').dataset.raw || "0";
+  const laborCost = document.querySelector('#fixedTable tr:nth-child(1) input').value || "0";
+  const landRent  = document.querySelector('#fixedTable tr:nth-child(3) input').value || "0";
+
+  // localStorage に保存
+  localStorage.setItem("otherFixedCostValue", rawOtherFixed);
+  localStorage.setItem("laborCostValue", laborCost);
+  localStorage.setItem("landRentValue", landRent);
+
+  // コピー内容をまとめる
+  const copyText = 
+    `その他固定費: ${rawOtherFixed}\n` +
+    `人件費: ${laborCost}\n` +
+    `支払地代: ${landRent}`;
+
+  navigator.clipboard.writeText(copyText)
+    .then(() => alert('その他固定費・人件費・支払地代をコピーしました'))
     .catch(() => alert('コピーに失敗しました'));
 }
+
 
 
 document.addEventListener('input', compute);
@@ -251,7 +263,7 @@ function downloadCsv() {
 
   let csv = "項目,金額（円）\n";
 
-  csv += `収入合計（交付金含む）,${document.getElementById('totalRevenue').value}\n`;
+  csv += `収入合計,${document.getElementById('totalRevenue').value}\n`;
   csv += `所得（利益）,${document.getElementById('income').value}\n`;
   csv += `臨時の収入,${document.getElementById('unexpectedIncome').value}\n`;
   csv += `臨時の支出,${document.getElementById('unexpectedExpense').value}\n`;
