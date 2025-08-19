@@ -332,7 +332,6 @@ function clearCrops() {
   cropCount = 0; // 作目数をリセット
 }
 
-// initCrops() は削除し、window.onload で直接 addCrop を呼び出す
 window.onload = function() {
   for (let i = 0; i < 5; i++) {
     addCrop(); // 初期作目数を設定 (デフォルト5作目)
@@ -519,12 +518,16 @@ function calculateFixedTotal() {
 
   // 固定費を <input> または <td> から取得
   const getFixedCost = labelText => {
-    // 固定費のテーブルは .summary-table クラスを持つので、それを指定して検索
-    // captionのtextContentをchildrenで指定しているのは、HTMLに直接書かれたcaptionテキストにアクセスするため
-    const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
-    if (!fixedCostTable) return 0; // 見つからなければ0を返す
+    // 固定費のテーブルを正確に特定
+    let targetFixedCostTable = null;
+    document.querySelectorAll(".summary-table").forEach(table => {
+      if (table.caption && table.caption.textContent.trim() === "固定費") {
+        targetFixedCostTable = table;
+      }
+    });
+    if (!targetFixedCostTable) return 0; // 見つからなければ0を返す
 
-    const rows = fixedCostTable.querySelectorAll("tr"); // 固定費テーブルの行を限定して検索
+    const rows = targetFixedCostTable.querySelectorAll("tr"); // 固定費テーブルの行を限定して検索
     for (const row of rows) {
       const labelCell = row.children[0];
       const valueCell = row.children[1];
@@ -552,9 +555,15 @@ function calculateFixedTotal() {
 
   // 表の「固定費計（円）」セルも更新する
   // 変更: 固定費テーブルの特定セルを更新
-  const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
-  if (fixedCostTable) {
-      fixedCostTable.querySelectorAll("tr").forEach(row => {
+  let fixedCostTableForUpdate = null;
+    document.querySelectorAll(".summary-table").forEach(table => {
+      if (table.caption && table.caption.textContent.trim() === "固定費") {
+        fixedCostTableForUpdate = table;
+      }
+    });
+
+  if (fixedCostTableForUpdate) {
+      fixedCostTableForUpdate.querySelectorAll("tr").forEach(row => {
           const labelCell = row.children[0];
           const valueCell = row.children[1];
           if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
@@ -1038,12 +1047,17 @@ window.stackedChartInstance = new Chart(ctx, {
   setTxt("sumBreakEven",   breakEvenRevenue);
 }
 
-//自動貼付 (この部分は今回の修正と直接関係ないが、残しておく)
+//自動貼付
 function applyValueToCell(storageKey, labelText) {
   const value = localStorage.getItem(storageKey);
   if (value !== null) {
     // captionで固定費テーブルを特定
-    const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+    let fixedCostTable = null;
+    document.querySelectorAll(".summary-table").forEach(table => {
+      if (table.caption && table.caption.textContent.trim() === "固定費") {
+        fixedCostTable = table;
+      }
+    });
     if (!fixedCostTable) return;
 
     fixedCostTable.querySelectorAll("tr").forEach(row => {
@@ -1080,7 +1094,12 @@ function importFixedCostsFromStorage() {
   const applyValueToSpecificFixedCostCell = (storageKey, labelText) => {
     const value = localStorage.getItem(storageKey);
     if (value !== null) {
-      const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+      let fixedCostTable = null;
+        document.querySelectorAll(".summary-table").forEach(table => {
+            if (table.caption && table.caption.textContent.trim() === "固定費") {
+                fixedCostTable = table;
+            }
+        });
       if (!fixedCostTable) return;
 
       fixedCostTable.querySelectorAll("tr").forEach(row => {
