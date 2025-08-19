@@ -145,7 +145,7 @@ button.copy-btn:active {
         <th>項目</th><th class="right">金額（円）</th>
       </tr>
       <tr>
-        <td>収入合計</td>
+        <td>収入合計（交付金含む）</td>
         <td class="right"><input id="totalRevenue" type="number" step="1" value="0"></td>
       </tr>
       <tr>
@@ -249,7 +249,7 @@ function downloadCsv() {
 
   let csv = "項目,金額（円）\n";
 
-  csv += `収入合計,${document.getElementById('totalRevenue').value}\n`;
+  csv += `収入合計（交付金含む）,${document.getElementById('totalRevenue').value}\n`;
   csv += `所得（利益）,${document.getElementById('income').value}\n`;
   csv += `臨時の収入,${document.getElementById('unexpectedIncome').value}\n`;
   csv += `臨時の支出,${document.getElementById('unexpectedExpense').value}\n`;
