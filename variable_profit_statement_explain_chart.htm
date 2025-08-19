@@ -285,7 +285,7 @@ canvas {
 
 <br><br>
 <!-- 経営全体 -->
-<table class="summary-table">
+<table class="summary-table" id="managementSummary">
   <caption>経営全体</caption>
   <tr><th>販売額（円）</th><td id="sumSales">–</td></tr>
   <tr><th>その他収入（円）</th><td id="sumOtherIncome">–</td></tr>
@@ -304,14 +304,47 @@ let cropCount = 0;
 // 音声出力の状態を管理する変数
 let isSpeechEnabled = true; 
 
-function initCrops() {
-  for (let i = 0; i < 5; i++) {
-    addCrop();
+// 既存の作目列をクリアする関数
+function clearCrops() {
+  // cropHeader から作目名のthを削除 (最初の「作目」thを除く)
+  const cropHeader = document.getElementById("cropHeader");
+  while (cropHeader.children.length > 1) { // 最初のth「作目」は残す
+    cropHeader.removeChild(cropHeader.lastChild);
   }
-}
-window.onload = initCrops;
 
-function addCrop() {
+  // cropTable, costTable, totalTable の tbody から動的なtdを削除
+  document.querySelectorAll("#cropTable tbody tr").forEach(row => {
+    while (row.children.length > 1) { // 最初のthは残す
+      row.removeChild(row.lastChild);
+    }
+  });
+  document.querySelectorAll("#costTable tbody tr").forEach(row => {
+    while (row.children.length > 1) { // 最初のthは残す
+      row.removeChild(row.lastChild);
+    }
+  });
+  document.querySelectorAll("#totalTable tbody tr").forEach(row => {
+    while (row.children.length > 1) { // 最初のthは残す
+      row.removeChild(row.lastChild);
+    }
+  });
+
+  cropCount = 0; // 作目数をリセット
+}
+
+// initCrops() は削除し、window.onload で直接 addCrop を呼び出す
+window.onload = function() {
+  for (let i = 0; i < 5; i++) {
+    addCrop(); // 初期作目数を設定 (デフォルト5作目)
+  }
+  calculateFixedTotal(); // 初回計算とグラフ描画
+  applySpeechAttributesToCells(); // 音声属性の適用
+  attachSpeechListeners(); // 音声イベントリスナーの追加
+};
+
+
+// addCrop 関数を修正して、作目名を引数で受け取れるようにする
+function addCrop(cropName = `作目${cropCount + 1}`) {
   cropCount++;
 
   // === 作目ヘッダ列追加 ===
@@ -319,7 +352,7 @@ function addCrop() {
   const cropTh = document.createElement("th");
   const nameInput = document.createElement("input");
   nameInput.type = "text";
-  nameInput.value = `作目${cropCount}`;
+  nameInput.value = cropName; // 引数で作目名を設定
   nameInput.placeholder = "作目名";
   nameInput.style.width = "150px";
   cropTh.appendChild(nameInput);
@@ -329,9 +362,8 @@ function addCrop() {
   // === 作目別収入テーブルに列追加 ===
   document.querySelectorAll("#cropTable tbody tr").forEach((row, i) => {
     const td = document.createElement("td");
-    if (i === 2 || i === 4) {
-      // 自動計算で埋まる行は初期値として –
-      td.textContent = "–";
+    if (i === 2 || i === 4) { // 10a販売額, 10a収入計
+      td.textContent = "–"; // 自動計算で埋まる行は初期値として –
     } else {
       const input = document.createElement("input");
       input.type = "number";
@@ -344,7 +376,7 @@ function addCrop() {
   // === 変動費・限界利益テーブルに列追加 ===
   document.querySelectorAll("#costTable tbody tr").forEach((row, i) => {
     const td = document.createElement("td");
-    if (i >= 3) {
+    if (i >= 3) { // 10a変動費計, 10a限界利益, 限界利益率
       td.textContent = "–";
     } else {
       const input = document.createElement("input");
@@ -461,7 +493,7 @@ function calculateFixedTotal() {
   // 各作目の集計
   areaInputs.forEach((input, idx) => {
     const area = parseFloat(input.value) || 0;
-    const colIndex = idx + 1;
+    const colIndex = idx + 1; // ヘッダーthを除いた実データ列のインデックス
 
     const income10a = parseFloat(cropRows[4].cells[colIndex]?.textContent.replace(/,/g, "")) || 0;
     const cost10a   = parseFloat(costRows[3].cells[colIndex]?.textContent.replace(/,/g, "")) || 0;
@@ -487,7 +519,12 @@ function calculateFixedTotal() {
 
   // 固定費を <input> または <td> から取得
   const getFixedCost = labelText => {
-    const rows = document.querySelectorAll("table tr");
+    // 固定費のテーブルは .summary-table クラスを持つので、それを指定して検索
+    // captionのtextContentをchildrenで指定しているのは、HTMLに直接書かれたcaptionテキストにアクセスするため
+    const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+    if (!fixedCostTable) return 0; // 見つからなければ0を返す
+
+    const rows = fixedCostTable.querySelectorAll("tr"); // 固定費テーブルの行を限定して検索
     for (const row of rows) {
       const labelCell = row.children[0];
       const valueCell = row.children[1];
@@ -496,6 +533,7 @@ function calculateFixedTotal() {
         if (input) {
           return parseFloat(input.value) || 0;
         } else {
+          // inputがなくてもtextContentがある場合があるので、それも考慮（例：固定費計）
           return parseFloat(valueCell.textContent.replace(/,/g, "")) || 0;
         }
       }
@@ -513,31 +551,39 @@ function calculateFixedTotal() {
   const breakEvenRevenue = marginRate > 0 ? fixedTotal / (marginRate / 100) : 0;
 
   // 表の「固定費計（円）」セルも更新する
-  const fixedCostRows = document.querySelectorAll("table tr");
-  fixedCostRows.forEach(row => {
-    const labelCell = row.children[0];
-    const valueCell = row.children[1];
-    if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
-      valueCell.textContent = fixedTotal.toLocaleString();
-    }
-  });
+  // 変更: 固定費テーブルの特定セルを更新
+  const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+  if (fixedCostTable) {
+      fixedCostTable.querySelectorAll("tr").forEach(row => {
+          const labelCell = row.children[0];
+          const valueCell = row.children[1];
+          if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
+              valueCell.textContent = fixedTotal.toLocaleString();
+          }
+      });
+  }
+
 
   // 経営全体テーブル更新
+  // ID 'managementSummary' を持つテーブルを直接参照
   const managementTable = document.getElementById("managementSummary");
   if (managementTable) {
     const setVal = (rowIndex, value) => {
-      if (managementTable.rows[rowIndex].cells.length < 2) {
-        managementTable.rows[rowIndex].insertCell(1);
+      // 経営全体テーブルは既に全行<td>を持つ構造なので、既存の<td>を更新
+      const targetTd = managementTable.rows[rowIndex].cells[1];
+      if (targetTd) {
+        targetTd.textContent =
+          value !== null && value !== undefined && !isNaN(value)
+            ? Math.round(value).toLocaleString() // 四捨五入して整数表示
+            : "–";
       }
-      managementTable.rows[rowIndex].cells[1].textContent =
-        value !== null && value !== undefined && !isNaN(value)
-          ? value.toLocaleString()
-          : "–";
     };
 
     const totalOtherIncome = Array.from(areaInputs).reduce((sum, input, idx) => {
       const colIndex = idx + 1;
-      const otherIncome10a = parseFloat(cropRows[3].cells[colIndex]?.querySelector("input")?.value) || 0;
+      // cropRows[3] は 10aその他収入（円）の行
+      const otherIncomeInput = cropRows[3].cells[colIndex]?.querySelector("input");
+      const otherIncome10a = otherIncomeInput ? (parseFloat(otherIncomeInput.value) || 0) : 0;
       const area = parseFloat(input.value) || 0;
       return sum + (otherIncome10a * (area / 10));
     }, 0);
@@ -547,9 +593,9 @@ function calculateFixedTotal() {
     setVal(0, totalSales);                          // 販売額
     setVal(1, totalOtherIncome);                    // その他収入
     setVal(2, totalRevenue);                        // 収入
-    setVal(3, totalVariableCost + fixedTotal);      // 費用
-    setVal(4, totalVariableCost);                   // 変動費
-    setVal(5, totalMargin);                         // 限界利益
+    setVal(3, totalVariableCost);                   // 変動費 
+    setVal(4, totalMargin);                         // 限界利益
+    setVal(5, totalVariableCost + fixedTotal);      // 費用 (変動費と固定費の合計)
     setVal(6, profit);                              // 利益
     setVal(7, breakEvenRevenue);                    // 損益分岐点
   }
@@ -558,28 +604,45 @@ function calculateFixedTotal() {
 }
 
 
-
 // CSV出力
 function tableToCSV() {
   let csv = [];
   document.querySelectorAll("table").forEach(table => {
-    table.querySelectorAll("tr").forEach(row => {
-      let rowData = [];
-      row.querySelectorAll("th, td").forEach(cell => {
-        let val = "";
-        if (cell.querySelector("input")) {
-          val = cell.querySelector("input").value;
-        } else {
-          val = cell.textContent;
+    // <caption>も行データとして出力
+    if (table.caption) {
+        // キャプションにカンマやダブルクォーテーションが含まれる場合はエスケープ
+        let captionText = table.caption.textContent.trim();
+        if (captionText.includes(",") || captionText.includes("\n") || captionText.includes('"')) {
+            captionText = `"${captionText.replace(/"/g, '""')}"`;
         }
-        if (val.includes(",") || val.includes("\n")) {
-          val = `"${val.replace(/"/g, '""')}"`; // ダブルクォーテーションをエスケープ
+        csv.push(captionText);
+    }
+
+    // テーブルの全行をループ
+    Array.from(table.rows).forEach(row => { // HTMLCollectionをArrayに変換
+      let rowData = [];
+      Array.from(row.querySelectorAll("th, td")).forEach(cell => {
+        let val = "";
+        const input = cell.querySelector("input");
+        if (input) {
+          val = input.value;
+        } else {
+          // テキストコンテンツがある場合、それを使用
+          val = cell.textContent.trim();
+        }
+        // 数値のカンマを削除（CSV保存時に邪魔になるため）
+        if (!isNaN(parseFloat(val.replace(/,/g, ''))) && val.includes(',')) {
+            val = val.replace(/,/g, '');
+        }
+        // ダブルクォーテーションや改行を含む場合はエスケープ
+        if (val.includes(",") || val.includes("\n") || val.includes('"')) {
+          val = `"${val.replace(/"/g, '""')}"`;
         }
         rowData.push(val);
       });
       csv.push(rowData.join(","));
     });
-    csv.push("");
+    csv.push(""); // 各テーブルの終わりに空行
   });
   return csv.join("\n");
 }
@@ -595,6 +658,7 @@ function downloadCSV() {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const fileName = `変動損益計算書_${year}${month}${day}_${hours}${minutes}.csv`;
 
+  // SJIS変換
   const sjisArray = Encoding.convert(Encoding.stringToCode(csvData), 'SJIS', 'UNICODE');
   const uint8Array = new Uint8Array(sjisArray);
   const blob = new Blob([uint8Array], { type: "application/octet-stream" });
@@ -614,31 +678,99 @@ function uploadCSV(event) {
   reader.onload = function(e) {
     const codes = Encoding.convert(new Uint8Array(e.target.result), 'UNICODE', 'SJIS');
     const text = Encoding.codeToString(codes);
-    const lines = text.split(/\r?\n/);
-    let lineIndex = 0;
+    // 空行をトリムしてフィルター
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line !== ""); 
 
+    // 既存の作目列をクリアして、初期状態に戻す
+    clearCrops();
+
+    // CSVデータをすべてパースしておく
+    const parsedCsv = lines.map(line => 
+      line.split(',').map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'))
+    );
+
+    let cropNames = [];
+    
+    // 作目ヘッダー行（例: "作目,作目1,作目2..."）を見つける
+    for (let i = 0; i < parsedCsv.length; i++) {
+      if (parsedCsv[i][0] === "作目") { // CSVの最初の列が「作目」の行を探す
+        // 1列目を除き、空でない作目名を取得
+        cropNames = parsedCsv[i].slice(1).filter(name => name.trim() !== ""); 
+        break;
+      }
+    }
+
+    if (cropNames.length === 0) {
+      alert("CSVから作目名を検出できませんでした。デフォルトの5作目を設定します。");
+      for(let i=0; i<5; i++) addCrop(); // 作目が見つからない場合はデフォルトで5作目作成
+    } else {
+      cropNames.forEach(name => addCrop(name)); // CSVから読み取った作目名で動的に作目を追加
+    }
+    
+    // データ割り当てロジック
+    // 各HTMLテーブルをループし、CSVの対応するブロックからデータを取得して設定
     document.querySelectorAll("table").forEach(table => {
-      const rows = table.rows;
-      for(let r = 0; r < rows.length; r++) {
-        const row = rows[r];
-        const cells = row.querySelectorAll("th, td");
-        const values = (lines[lineIndex] || "").split(',').map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
+      let tableStartCsvRowIdx = -1;
+      
+      // 各テーブルのキャプションに基づいてCSVの開始行を特定
+      if (table.caption?.textContent === "作目別収入") {
+        tableStartCsvRowIdx = lines.findIndex(line => line.startsWith("作目,"));
+      } else if (table.caption?.textContent === "10aあたり変動費、限界利益") {
+        tableStartCsvRowIdx = lines.findIndex(line => line.startsWith("10a資材費（円）,"));
+      } else if (table.caption?.textContent === "面積との関係") {
+        tableStartCsvRowIdx = lines.findIndex(line => line.startsWith("面積（a）,"));
+      } else if (table.caption?.textContent === "固定費") {
+        tableStartCsvRowIdx = lines.findIndex(line => line.startsWith("人件費（円）,"));
+      } else if (table.caption?.textContent === "経営全体") {
+        tableStartCsvRowIdx = lines.findIndex(line => line.startsWith("販売額（円）,"));
+      }
+      
+      if (tableStartCsvRowIdx === -1) {
+          // 対応するCSVブロックが見つからない場合はスキップ
+          console.warn(`CSVでテーブル ${table.id || table.caption?.textContent} の開始行が見つかりませんでした。`);
+          return; 
+      }
 
-        cells.forEach((cell, i) => {
-          const input = cell.querySelector("input");
-          if (input) {
-            input.value = values[i] !== undefined ? values[i].trim() : "";
+      // 各HTMLテーブルの行にCSVデータを割り当てる
+      // <caption>の行は含まないでテーブルの実際の行データを処理する
+      Array.from(table.rows).forEach((htmlRow, r_html) => {
+        // CSVの対応する行インデックスは、テーブルの開始CSV行 + HTMLテーブル内の行インデックス
+        // downloadCSVで出力する際にcaptionは別行に出力されるため、ここではcaption行を考慮しない
+        // HTMLテーブルの実際の行 `r_html` とCSVの `tableStartCsvRowIdx + r_html` を対応させる
+        const csvCurrentLine = parsedCsv[tableStartCsvRowIdx + r_html];
+        
+        if (!csvCurrentLine) {
+            console.warn(`CSVのデータが不足しています。テーブル ${table.caption?.textContent} の行 ${r_html} に対応するデータがありません。`);
+            return;
+        }
+
+        Array.from(htmlRow.querySelectorAll("th, td")).forEach((cell, i_cell) => {
+          // CSVデータの該当列から値を取得
+          const csvValue = csvCurrentLine[i_cell]; 
+
+          if (csvValue !== undefined) {
+            const input = cell.querySelector("input");
+            if (input) {
+              // input要素にはCSVの値をそのまま設定
+              input.value = csvValue.trim();
+            } else {
+              // input要素がないセル（計算結果表示セルなど）は、CSVの値で更新しない
+              // 計算結果は calculateCrop/calculateFixedTotal で再計算されるため
+            }
           }
         });
-        lineIndex++;
-      }
-      lineIndex++;
+      });
     });
 
+    // 読み込み後、すべての計算を再実行
+    // 作目数に応じて各作目の計算を呼ぶ
     for (let i = 1; i <= cropCount; i++) {
       calculateCrop(i);
     }
+    // 全体の計算を呼ぶ
     calculateFixedTotal();
+    
+    // 音声説明の更新
     applySpeechAttributesToCells();
     attachSpeechListeners();
   };
@@ -692,10 +824,8 @@ const speechMap = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 既存のセルに音声属性を追加
-  applySpeechAttributesToCells();
-  attachSpeechListeners(); // 初期リスナー設定
-
+  // applySpeechAttributesToCells()とattachSpeechListeners()はwindow.onloadで呼ばれるため、ここでは不要
+  
   // 音声トグルボタンのイベントリスナー
   const toggleSpeechButton = document.getElementById('toggleSpeechButton');
   if (toggleSpeechButton) {
@@ -716,11 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll("input[type='number'], input[type='text'], select, textarea")
     .forEach(el => el.addEventListener("input", drawStackedChart));
   
-  // 初期ロード時にもグラフを確実に描画
-  // initCrops() の中で calculateFixedTotal() が呼ばれ、その中で drawStackedChart() も呼ばれるため、
-  // ここでの directな呼び出しは基本的に不要だが、安全策として残しても良い。
-  // 今回は calculateFixedTotal() が initCrops() から呼ばれるので、不要としてコメントアウトします。
-  // drawStackedChart(); 
 });
 
 // セルに音声属性を適用する関数
@@ -765,12 +890,12 @@ function drawStackedChart() {
 
   // 作目名（<input> or th.textContent）
   const cropNames = Array.from(document.querySelectorAll("#cropHeader th"))
-    .slice(1)
+    .slice(1) // 最初の"作目"thを除外
     .map(th => {
       const inp = th.querySelector("input");
-      return inp ? inp.value.trim() : th.textContent.trim();
+      return inp ? inp.value.trim() : th.textContent.trim(); // inputがあればそのvalue、なければtextContent
     })
-    .map(n => n || "未設定");
+    .map(n => n || "未設定"); // 名前が空の場合は"未設定"
 
   let totalSales        = 0;
   let totalOtherIncome  = 0;
@@ -781,7 +906,7 @@ function drawStackedChart() {
   areaInputs.forEach((input, idx) => {
     const area    = getNum(input.value);
     const factor  = area / 10;
-    const col     = idx + 1;
+    const col     = idx + 1; // ヘッダーthを除いた実データ列のインデックス
 
     // 各セルの値を取得
     const sales10a       = getNum(cropRows[2].cells[col]?.textContent); // salesCell.textContentから取得
@@ -825,10 +950,11 @@ window.stackedChartInstance = new Chart(ctx, {
       { label: "固定費", data: [0, 0, fixedTotal, 0, 0], backgroundColor: "#ffa07a", stack: "stack1", barThickness: 250 },
       { label: "利益", data: [0, 0, profit, 0, 0], backgroundColor: "#87cefa", stack: "stack1", barThickness: 250 },
       { label: "限界利益（全体）", data: [0, 0, 0, margin, 0], backgroundColor: "#6495ed", stack: "stack1", barThickness: 250 },
+      // 各作目の限界利益データセットを動的に生成
       ...cropMargins.map((val, i) => ({
         label: `${cropNames[i]} 限界利益`,
-        data: [0, 0, 0, 0, val],
-        backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb"][i % 5],
+        data: [0, 0, 0, 0, val], // 作目別限界利益のデータは最後のラベルに対応
+        backgroundColor: ["#ffd700", "#ffb6c1", "#dda0dd", "#98fb98", "#87ceeb", "#add8e6", "#ffc0cb", "#7fffd4", "#fa8072", "#afeeee"][i % 10], // 配色パターンを増やす
         stack: "stack1",
         barThickness: 250
       }))
@@ -907,47 +1033,63 @@ window.stackedChartInstance = new Chart(ctx, {
   setTxt("sumRevenue",     revenue);
   setTxt("sumVarCost",     totalVariableCost);
   setTxt("sumMargin",      margin);
-  setTxt("sumCostTotal",   costTotal);
+  setTxt("sumCostTotal",   costTotal); // 修正後の費用
   setTxt("sumProfit",      profit);
   setTxt("sumBreakEven",   breakEvenRevenue);
 }
 
-//自動貼付
+//自動貼付 (この部分は今回の修正と直接関係ないが、残しておく)
 function applyValueToCell(storageKey, labelText) {
   const value = localStorage.getItem(storageKey);
   if (value !== null) {
-    const rows = document.querySelectorAll("table tr");
-    rows.forEach(row => {
+    // captionで固定費テーブルを特定
+    const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+    if (!fixedCostTable) return;
+
+    fixedCostTable.querySelectorAll("tr").forEach(row => {
       const labelCell = row.children[0];
       const valueCell = row.children[1];
       if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
-        valueCell.textContent = parseInt(value).toLocaleString(); // 表示形式に整える
+        const input = valueCell.querySelector("input"); // input要素があればvalueを設定
+        if(input) {
+            input.value = parseInt(value);
+        } else {
+            // inputがない場合はtextContentを更新（例：固定費計）
+            valueCell.textContent = parseInt(value).toLocaleString(); 
+        }
       }
     });
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+// データ取り込みボタンのイベントリスナーはDOMContentLoadedで設定
+document.addEventListener("DOMContentLoaded", () => {
+  // 既存のDOMContentLoadedの内容に加えて、storageからの初期値適用もここで行う
+  // ページロード時にもlocalStorageの値を適用する
   applyValueToCell("otherFixedCostValue", "その他固定費（円）");
   applyValueToCell("depreciationTotalValue", "減価償却費（円）");
+  applyValueToCell("laborCostValue", "人件費（円）"); 
+  applyValueToCell("landRentCostValue", "支払地代（円）"); 
+
+  document.getElementById("importFixedCosts").addEventListener("click", importFixedCostsFromStorage);
 });
 
+
 //データ取り込み
-// データ取り込み
 function importFixedCostsFromStorage() {
-  const applyValueToCell = (storageKey, labelText) => {
+  const applyValueToSpecificFixedCostCell = (storageKey, labelText) => {
     const value = localStorage.getItem(storageKey);
     if (value !== null) {
-      const rows = document.querySelectorAll("table tr");
-      rows.forEach(row => {
+      const fixedCostTable = document.querySelector(".summary-table caption[children='固定費']")?.closest("table");
+      if (!fixedCostTable) return;
+
+      fixedCostTable.querySelectorAll("tr").forEach(row => {
         const labelCell = row.children[0];
         const valueCell = row.children[1];
         if (labelCell && valueCell && labelCell.textContent.trim() === labelText) {
           const input = valueCell.querySelector("input");
           if (input) {
-            input.value = parseInt(value);
-          } else {
-            valueCell.textContent = parseInt(value).toLocaleString();
+            input.value = parseFloat(value); // 数値として設定
           }
         }
       });
@@ -955,56 +1097,15 @@ function importFixedCostsFromStorage() {
   };
 
   // すべての固定費項目を取り込む
-  applyValueToCell("laborCostValue", "人件費（円）");
-  applyValueToCell("depreciationTotalValue", "減価償却費（円）");
-  applyValueToCell("landRentCostValue", "支払地代（円）");
-  applyValueToCell("otherFixedCostValue", "その他固定費（円）");
+  applyValueToSpecificFixedCostCell("laborCostValue", "人件費（円）");
+  applyValueToSpecificFixedCostCell("depreciationTotalValue", "減価償却費（円）");
+  applyValueToSpecificFixedCostCell("landRentCostValue", "支払地代（円）");
+  applyValueToSpecificFixedCostCell("otherFixedCostValue", "その他固定費（円）");
 
-  // 固定費計（円）を再計算して表示
-  const getFixedCost = label => {
-    const rows = document.querySelectorAll("table tr");
-    for (const row of rows) {
-      const labelCell = row.children[0];
-      const valueCell = row.children[1];
-      if (labelCell && valueCell && labelCell.textContent.trim() === label) {
-        const input = valueCell.querySelector("input");
-        if (input) {
-          return parseInt(input.value.replace(/,/g, ""), 10) || 0;
-        } else {
-          return parseInt(valueCell.textContent.replace(/,/g, ""), 10) || 0;
-        }
-      }
-    }
-    return 0;
-  };
-
-  const labor        = getFixedCost("人件費（円）");
-  const depreciation = getFixedCost("減価償却費（円）");
-  const landRent     = getFixedCost("支払地代（円）");
-  const otherFixed   = getFixedCost("その他固定費（円）");
-  const fixedTotal   = labor + depreciation + landRent + otherFixed;
-
-  // 表の「固定費計（円）」セルを更新
-  const rows = document.querySelectorAll("table tr");
-  rows.forEach(row => {
-    const labelCell = row.children[0];
-    const valueCell = row.children[1];
-    if (labelCell && valueCell && labelCell.textContent.trim() === "固定費計（円）") {
-      const input = valueCell.querySelector("input");
-      if (input) {
-        input.value = fixedTotal;
-      } else {
-        valueCell.textContent = fixedTotal.toLocaleString();
-      }
-    }
-  });
-
-  calculateFixedTotal(); // 経営全体の再計算
+  calculateFixedTotal(); // 固定費を取り込んだ後、全体の再計算と表示更新
 
   alert("固定費データを取り込みました");
 }
-
-document.getElementById("importFixedCosts").addEventListener("click", importFixedCostsFromStorage);
 
 
 </script>
