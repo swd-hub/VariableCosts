@@ -164,7 +164,7 @@ button.copy-btn:active {
 
     <h3 style="margin-top:16px;margin-bottom:8px;font-size:20px">面積に応じて変動する費用（変動費）の内訳</h3>
     <table id="varTable">
-	  <tr><td>種苗費</td><td class="right"><input type="number" step="1" value="0"></td></tr> 	
+      <tr><td>種苗費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>肥料費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>農薬費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
       <tr><td>資材費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
@@ -180,6 +180,10 @@ button.copy-btn:active {
       </div>
       
     <h3 style="margin-top:16px;margin-bottom:8px;font-size:20px">固定費の費目</h3>
+<p style="font-size: 0.9em; color: #555; margin-top: -10px;">
+  ※人件費＝給与＋賞与＋役員報酬＋雑給＋法定福利費＋福利厚生費
+</p>
+
     <table id="fixedTable">
 	  <tr><td>人件費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
 	  <tr><td>法定耐用年数による減価償却費</td><td class="right"><input type="number" step="1" value="0"></td></tr>
@@ -335,5 +339,4 @@ document.addEventListener('input', () => {
 
 </script>
 </body>
-
 </html>
