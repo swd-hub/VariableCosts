@@ -219,24 +219,22 @@ function createTable(data) {
 
   const headerRow = data[0];
   let calcColIndex = headerRow.indexOf('回数');
-  // '回数'列が見つからなければ、新しい'金額'列をヘッダーの最後に追加
   if (calcColIndex === -1) {
     headerRow.push('金額');
-    calcColIndex = headerRow.length - 1; // '金額'の新しいインデックス
+    calcColIndex = headerRow.length - 1;
   } else {
-    calcColIndex += 1; // '回数'の次の列
+    calcColIndex += 1;
     headerRow.splice(calcColIndex, 0, '金額');
   }
 
-  const newHeader = [...headerRow]; // ヘッダー行をコピーして使用
+  const newHeader = [...headerRow];
 
   const newData = data.slice(1).map(row => {
     const newRow = [...row];
-    // ヘッダーと同様に、金額列を適切な位置に追加
-    if (newHeader.includes('金額')) { // ヘッダーに金額列が追加されたか確認
+    if (newHeader.includes('金額')) {
       newRow.splice(calcColIndex, 0, '');
     } else {
-      newRow.push(''); // '金額'列がなかった場合は最後に追加
+      newRow.push('');
     }
     return newRow;
   });
@@ -248,18 +246,27 @@ function createTable(data) {
     finalData.slice(1).map(row => row[remarkColIndex]).filter(v => v)
   )].sort() : [];
 
-  finalData.forEach((row, rowIndex) => {
-    const tr = document.createElement('tr');
+  // ===============================
+  // 1行目：通常のヘッダー行
+  // ===============================
+  const trHeader = document.createElement('tr');
+  newHeader.forEach(colName => {
+    const th = document.createElement('th');
+    th.textContent = colName;
+    trHeader.appendChild(th);
+  });
+  table.appendChild(trHeader);
 
+  // ===============================
+  // 2行目：フィルター用の行（備考の列だけselectを置く）
+  // ===============================
+  if (remarkColIndex !== -1) {
+    const trFilter = document.createElement('tr');
     newHeader.forEach((colName, colIndex) => {
-      const cellValue = row[colIndex] ?? '';
-      const tag = rowIndex === 0 ? 'th' : 'td';
-      const td = document.createElement(tag);
-      td.style.textAlign = 'right';
-
-      if (rowIndex === 0 && colIndex === remarkColIndex && remarkColIndex !== -1) {
+      const td = document.createElement('td');
+      td.style.textAlign = 'center';
+      if (colIndex === remarkColIndex && remarkValues.length > 0) {
         const select = document.createElement('select');
-        select.style.width = '100%';
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = '▼ 備考フィルター';
@@ -276,7 +283,7 @@ function createTable(data) {
           const keyword = this.value;
           const allRows = table.querySelectorAll('tr');
           allRows.forEach((r, i) => {
-            if (i === 0) return;
+            if (i <= 1) return; // ヘッダー行とフィルター行は飛ばす
             const cell = r.querySelectorAll('td')[remarkColIndex];
             const text = cell?.textContent?.trim() || '';
             r.style.display = keyword === '' || text === keyword ? '' : 'none';
@@ -284,11 +291,24 @@ function createTable(data) {
         });
 
         td.appendChild(select);
+      }
+      trFilter.appendChild(td);
+    });
+    table.appendChild(trFilter);
+  }
 
-      } else if (rowIndex === 0 && colName === '金額') {
-        td.textContent = '金額';
+  // ===============================
+  // データ行
+  // ===============================
+  finalData.slice(1).forEach(row => {
+    const tr = document.createElement('tr');
 
-      } else if (rowIndex > 0 && colName === '回数') {
+    newHeader.forEach((colName, colIndex) => {
+      const cellValue = row[colIndex] ?? '';
+      const td = document.createElement('td');
+      td.style.textAlign = 'right';
+
+      if (colName === '回数') {
         const input = document.createElement('input');
         input.type = 'number';
         input.min = '0';
@@ -296,8 +316,7 @@ function createTable(data) {
         input.style.width = '60px';
         input.style.textAlign = 'right';
         td.appendChild(input);
-
-      } else if (rowIndex > 0 && colName === '１０アール量') {
+      } else if (colName === '１０アール量') {
         const input = document.createElement('input');
         input.type = 'number';
         input.min = '0';
@@ -306,10 +325,8 @@ function createTable(data) {
         input.style.width = '80px';
         input.style.textAlign = 'right';
         td.appendChild(input);
-
-      } else if (rowIndex > 0 && colName === '金額') {
+      } else if (colName === '金額') {
         td.textContent = '―';
-
       } else {
         td.textContent = cellValue;
       }
@@ -322,6 +339,8 @@ function createTable(data) {
 
   return table;
 }
+
+
 
 function createTableForFile1(data) {
   const table = document.createElement('table');
