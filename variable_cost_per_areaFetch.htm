@@ -157,7 +157,6 @@ button:hover {
   <button id="calcFile2">計算する</button>
 </div>
 
-
 <div id="table2" style="display: none;"></div>
 
 <script>
@@ -199,7 +198,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 });
-
   
 function parseCSV(content) {
   return content
@@ -339,7 +337,6 @@ function createTable(data) {
 
   return table;
 }
-
 
 
 function createTableForFile1(data) {
@@ -678,7 +675,6 @@ function handleFile2Load(e) {
 }
 
 
-
 document.getElementById('calcFile2').addEventListener('click', function () {
   const table = document.querySelector('#table2 table');
   if (!table) {
@@ -751,7 +747,6 @@ document.getElementById('calcFile2').addEventListener('click', function () {
       .catch(() => alert('コピーに失敗しました'));
   }
 });
-
   
 document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
 
@@ -773,17 +768,17 @@ function saveTable2SelectedToCSV() {
     remark: headers.indexOf('備考') // 備考列も追加
   };
 
-  // 保存するヘッダーを指定
-  const selectedHeader = ['品名', '１０アール量', '単位', '回数', '金額','備考'];
- /* if (idx.remark !== -1) { // 備考列が存在する場合のみ追加
-    selectedHeader.push('備考');
-  } */
+  // 保存するヘッダーを指定（備考は存在する場合のみ追加）
+  const selectedHeader = ['品名', '１０アール量', '単位', '回数', '金額'];
+  if (idx.remark !== -1) selectedHeader.push('備考');
 
   const csvRows = [selectedHeader];
 
   const rows = table.querySelectorAll('tr');
   rows.forEach((tr, i) => {
+    // ヘッダー行とフィルター行（selectを含む行）をスキップ
     if (i === 0) return; // ヘッダー行はスキップ
+    if (tr.querySelector('select')) return; // フィルター行をスキップ
     if (tr.style.display === 'none') return; // 非表示の行はスキップ
 
     const cells = tr.querySelectorAll('td');
@@ -807,13 +802,13 @@ function saveTable2SelectedToCSV() {
   const csv = csvRows.map(row =>
     row.map(cell => {
       // CSV出力時にカンマ、改行、ダブルクォーテーション、空白を含む文字列をダブルクォーテーションで囲む処理
-      const processedCell = String(cell).replace(/"/g, '""'); // 既存のダブルクォーテーションをエスケープ
+      const processedCell = String(cell ?? '').replace(/"/g, '""'); // 既存のダブルクォーテーションをエスケープ
       return (processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') || processedCell.includes(' ') || processedCell.includes('　')) ? `"${processedCell}"` : processedCell;
     }).join(',')
   ).join('\r\n');
 
   const now = new Date();
-  const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`;
+  const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
   const baseName = file2OriginalName || '表2';
   const filename = `${baseName}_${timestamp}.csv`;
 
@@ -856,8 +851,7 @@ function getUnitConversionFactor(fromUnit, toUnit) {
   };
 
   return (table[uFrom] && table[uFrom][uTo]) ? table[uFrom][uTo] : null;
-}
-  
+}  
 
   </script>
 </body>
