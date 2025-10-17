@@ -789,21 +789,47 @@ function saveTable2SelectedToCSV() {
     const amount = cells[idx.amount]?.querySelector('input')?.value?.trim() ?? cells[idx.amount]?.textContent?.trim() ?? '';
     const unit = cells[idx.unit]?.textContent.trim();
     const count = cells[idx.count]?.querySelector('input')?.value?.trim() ?? cells[idx.count]?.textContent?.trim() ?? '';
-    const price = cells[idx.price]?.querySelector('input')?.value?.trim() ?? cells[idx.price]?.textContent?.trim() ?? '';
+    const priceRaw = cells[idx.price]?.querySelector('input')?.value?.trim() ?? cells[idx.price]?.textContent?.trim() ?? '';
     const remark = (idx.remark !== -1 && cells[idx.remark]) ? cells[idx.remark]?.textContent?.trim() ?? '' : '';
 
-    rowData.push(name, amount, unit, count,price);
+    // 金額列の変換: '―' を 0 に、カンマや全角カンマや空白を削除して数値文字列にする
+    let price = (priceRaw ?? '').trim();
+    if (price === '―' || price === '—' || price === '') {
+      price = '0';
+    } else {
+      // 通貨記号や「円」等を取り除き、カンマや全角カンマ、スペースを除去
+      price = String(price).replace(/[,，\s　]|円|円（税込）/g, '');
+      // 非数値文字が残っていれば取り除く（小数点とマイナスは残す）
+      price = price.replace(/[^\d.\-]/g, '');
+      if (price === '') price = '0';
+    }
+
+    rowData.push(name, amount, unit, count, price);
     if (idx.remark !== -1) {
         rowData.push(remark);
     }
     csvRows.push(rowData);
   });
 
+  // CSV 行を組み立てる
   const csv = csvRows.map(row =>
-    row.map(cell => {
-      // CSV出力時にカンマ、改行、ダブルクォーテーション、空白を含む文字列をダブルクォーテーションで囲む処理
-      const processedCell = String(cell ?? '').replace(/"/g, '""'); // 既存のダブルクォーテーションをエスケープ
-      return (processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') || processedCell.includes(' ') || processedCell.includes('　')) ? `"${processedCell}"` : processedCell;
+    row.map((cell, i) => {
+      const headerName = selectedHeader[i] || '';
+      const rawCell = String(cell ?? '');
+
+      // 金額列は数値（カンマなし）として出力：引用符で囲まない
+      if (headerName === '金額') {
+        // 数値チェックおよび整形（整数にしたい場合は Math.round などをここで実行しても良い）
+        const num = rawCell.replace(/[,，\s　]/g, '');
+        return num === '' ? '0' : num;
+      }
+
+      // その他の列はダブルクォートをエスケープし、必要なら引用符で囲む
+      const processedCell = rawCell.replace(/"/g, '""');
+      if (processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') || /\s/.test(processedCell) || /　/.test(processedCell)) {
+        return `"${processedCell}"`;
+      }
+      return processedCell;
     }).join(',')
   ).join('\r\n');
 
