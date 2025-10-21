@@ -22,12 +22,44 @@ body {
   margin: 0 auto;
 }
 
+/* h1とボタンを横並びにするためのコンテナスタイル */
+.header-container {
+  display: flex;
+  align-items: center; /* 縦方向の中央揃え */
+  margin-bottom: 14px; /* h1の下マージンに合わせて調整 */
+}
+
 h1 {
-  margin: 0 0 14px;
+  margin: 0; /* デフォルトマージンをリセットし、親divでマージンを管理 */
   font-size: 24px; /* 表題は元のまま */
   color: #083344;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.08); /* 軽い奥行き */
+  flex-shrink: 0; /* h1が縮まないようにする */
 }
+
+/* 新しいボタンを右寄せにするためのスタイル */
+#openOperationStep2 {
+  margin-left: auto; /* 左側のマージンを自動調整して右に寄せる */
+  white-space: nowrap; /* ボタン内のテキストが改行されないようにする */
+  /* 既存のbuttonスタイルが適用されるので、追加で必要なのは配置関連のみ */
+  /* ここに追加するボタンは、#control buttonとは別のスタイルを使用しても良い */
+  padding: 8px 14px; /* ボタンのサイズを調整 */
+  background: linear-gradient(to bottom, #0095d9, #007bb5); /* ステップ1のボタンと統一 */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em; /* サイズを少し小さく */
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+#openOperationStep2:hover {
+  background: linear-gradient(to bottom, #00a7f0, #005f8e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+}
+
 
 .card {
   background: linear-gradient(to bottom, #fff, #f9fbfd); /* グラデーションで立体感 */
@@ -137,8 +169,10 @@ button.copy-btn:active {
   <button onclick="downloadCsv()">データ保存</button>
   <br><br>
 </div>
-
-  <h1>ステップ２：損益計算書からその他固定費を計算する表</h1>
+  <div class="header-container">
+    <h1>ステップ２：損益計算書からその他固定費を計算する表</h1>
+    <button id="openOperationStep2">基本操作</button>
+  </div>
 
   <div class="card">
     <table>
@@ -315,12 +349,25 @@ function saveFixedCostToStorage(){
   localStorage.setItem("otherFixedCostValue", rawValue);
 }
 
-document.addEventListener('input', () => {
+document.addEventListener('DOMContentLoaded', () => {
+  // ページロード時の初期計算と保存
   compute();
-  saveFixedCostToStorage(); // 入力のたびに保存
+  saveFixedCostToStorage();
+
+  // イベントリスナーの追加
+  document.addEventListener('input', () => {
+    compute();
+    saveFixedCostToStorage(); // 入力のたびに保存
+  });
+
+  // 新しいボタンのイベントリスナー
+  const openOpStep2Btn = document.getElementById('openOperationStep2');
+  if (openOpStep2Btn) {
+    openOpStep2Btn.addEventListener('click', () => {
+      window.open('operation-step２.htm', '_blank'); // 新しいタブで開く
+    });
+  }
 });
-
-
 </script>
 </body>
 </html>

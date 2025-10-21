@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -14,12 +14,44 @@ body {
   color: #333;
   margin: 30px;
 }
+
+/* h1とボタンを横並びにするためのコンテナスタイル */
+.header-container {
+  display: flex;
+  align-items: center; /* 縦方向の中央揃え */
+  margin-bottom: 20px; /* h1の下マージンに合わせて調整 */
+}
+
 h1 {
   font-size: 28px;
-  margin-bottom: 20px;
+  margin: 0; /* デフォルトマージンをリセットし、親divでマージンを管理 */
   color: #2c3e50;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
+  flex-shrink: 0; /* h1が縮まないようにする */
 }
+
+/* 新しいボタンを右寄せにするためのスタイル (ステップ1, 2と統一) */
+#openOperationStep1 {
+  margin-left: auto; /* 左側のマージンを自動調整して右に寄せる */
+  white-space: nowrap; /* ボタン内のテキストが改行されないようにする */
+  padding: 8px 14px; /* ボタンのサイズを調整 */
+  background: linear-gradient(to bottom, #0095d9, #007bb5); /* ステップ1のボタンと統一 */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em; /* サイズを少し小さく */
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+#openOperationStep1:hover {
+  background: linear-gradient(to bottom, #00a7f0, #005f8e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+}
+
+
 table {
   table-layout: fixed;
   border-collapse: collapse;
@@ -119,7 +151,10 @@ input:focus, select:focus {
 </head>
 <body>
 
-<h1>ステップ３：予想使用可能年数による固定資産台帳</h1>
+<div class="header-container">
+  <h1>ステップ３：予想使用可能年数による固定資産台帳</h1>
+  <button id="openOperationStep1">基本操作</button>
+</div>
 
 <div id="control">
   <input type="file" id="csvFile" accept=".csv">
@@ -361,7 +396,17 @@ function saveDepreciationToStorage() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", saveDepreciationToStorage);
+window.addEventListener("DOMContentLoaded", () => {
+  saveDepreciationToStorage(); // 既存の処理を呼び出し
+
+  // 新しいボタンのイベントリスナーを追加
+  const openOpStep1Btn = document.getElementById('openOperationStep1');
+  if (openOpStep1Btn) {
+    openOpStep1Btn.addEventListener('click', () => {
+      window.open('operation-step３.htm', '_blank'); // 新しいタブで開く
+    });
+  }
+});
 </script>
 
 </body>

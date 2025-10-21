@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ステップ４の操作法</title>
+    <style>
+        /*
+         * CSSスタイル: 見た目を整えます
+         */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #e0f7fa; /* 明るい水色の背景 */
+            color: #333;
+        }
+
+        h1 {
+            color: #00796b; /* 濃い目のターコイズ */
+            margin-bottom: 30px;
+        }
+
+        #flipbook-container {
+            border: 3px solid #00acc1; /* 水色の枠線 */
+            padding: 25px; /* パディングを少し増やす */
+            background-color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.25); /* 影を強調 */
+            text-align: center;
+            border-radius: 12px; /* 角を少し丸く */
+            max-width: 700px; /* コンテナの最大幅を大きく */
+            width: 90%; /* 小さい画面でもフィットするように */
+        }
+
+        #flipbook-image {
+            max-width: 650px; /* 画像の最大幅を大幅に調整 */
+            width: 100%; /* 親要素に合わせる */
+            height: auto; /* アスペクト比を維持 */
+            border: 1px solid #ddd;
+            margin-bottom: 25px; /* マージンを少し増やす */
+            border-radius: 8px; /* 角を少し丸く */
+            display: block; /* 中央寄せのため */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .controls {
+            margin-top: 20px; /* マージンを少し増やす */
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap; /* ボタンが多すぎる場合に折り返す */
+        }
+
+        .controls button {
+            padding: 12px 25px; /* パディングを増やす */
+            margin: 10px; /* マージンを増やす */
+            font-size: 1.2em; /* フォントサイズを大きく */
+            cursor: pointer;
+            border: none;
+            background-color: #00bcd4; /* 青緑色 */
+            color: white;
+            border-radius: 6px; /* 角を少し丸く */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15); /* 影を強調 */
+        }
+
+        .controls button:hover {
+            background-color: #0097a7; /* ホバーで少し濃く */
+            transform: translateY(-2px); /* 少し浮き上がるエフェクトを強調 */
+        }
+
+        .controls button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .controls button:disabled {
+            background-color: #b2ebf2; /* 無効時は薄い色 */
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>ステップ４の操作法</h1>
+
+    <div id="flipbook-container">
+        <!-- パラパラ漫画を表示する画像要素 -->
+        <img id="flipbook-image" src="" alt="Step Instruction Frame">
+
+        <!-- コントロールボタン -->
+        <div class="controls">
+            <button id="prevBtn">前へ</button>
+            <button id="nextBtn">次へ</button>
+        </div>
+    </div>
+
+    <script>
+        /*
+         * JavaScriptロジック: パラパラ漫画の動作を制御します
+         */
+
+        // HTML要素への参照を取得
+        const flipbookImage = document.getElementById('flipbook-image');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        // ★★★ ここにご自身の画像ファイルのパスを設定してください ★★★
+        // 指定されたフォルダとファイル名に合わせてパスを生成します。
+        const images = [];
+        for (let i = 20; i <= 27; i++) {
+            images.push(`operation-stepsPNG/スライド${i}.PNG`);
+        }
+
+        let currentFrameIndex = 0; // 現在表示されているフレームのインデックス
+
+        /**
+         * 現在のフレームに基づいて画像とフレーム情報を更新する関数
+         */
+        function updateFrame() {
+            if (images.length === 0) {
+                flipbookImage.src = ''; // 画像がない場合は空にする
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            flipbookImage.src = images[currentFrameIndex];
+
+            // 前後ボタンの有効/無効を切り替える
+            prevBtn.disabled = currentFrameIndex === 0;
+            nextBtn.disabled = currentFrameIndex === images.length - 1;
+        }
+
+        /**
+         * 次のフレームに進む関数
+         */
+        function nextFrame() {
+            if (currentFrameIndex < images.length - 1) {
+                currentFrameIndex++;
+                updateFrame();
+            }
+        }
+
+        /**
+         * 前のフレームに戻る関数
+         */
+        function prevFrame() {
+            if (currentFrameIndex > 0) {
+                currentFrameIndex--;
+                updateFrame();
+            }
+        }
+
+        // --- イベントリスナーの設定 ---
+        prevBtn.addEventListener('click', prevFrame);
+        nextBtn.addEventListener('click', nextFrame);
+
+        // ページ読み込み時に最初のフレームを表示
+        updateFrame();
+    </script>
+</body>
+</html>

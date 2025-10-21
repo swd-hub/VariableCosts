@@ -15,11 +15,41 @@ body {
   margin: 30px;
 }
 
+/* h1とボタンを横並びにするためのコンテナスタイル */
+.header-container {
+  display: flex;
+  align-items: center; /* 縦方向の中央揃え */
+  margin-bottom: 20px; /* h1の下マージンに合わせて調整 */
+}
+
 h1 {
   font-size: 28px;
-  margin-bottom: 20px;
+  margin: 0; /* デフォルトマージンをリセットし、親divでマージンを管理 */
   color: #2c3e50;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.08); /* 軽く奥行き */
+  flex-shrink: 0; /* h1が縮まないようにする */
+}
+
+/* 新しいボタンを右寄せにするためのスタイル (ステップ1, 2, 3と統一) */
+/* IDをopenOperationStep4に変更したので、セレクタも変更または追加 */
+#openOperationStep4 { /* ここを修正しました */
+  margin-left: auto; /* 左側のマージンを自動調整して右に寄せる */
+  white-space: nowrap; /* ボタン内のテキストが改行されないようにする */
+  padding: 8px 14px; /* ボタンのサイズを調整 */
+  background: linear-gradient(to bottom, #0095d9, #007bb5); /* ステップ1のボタンと統一 */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em; /* サイズを少し小さく */
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+#openOperationStep4:hover { /* ここを修正しました */
+  background: linear-gradient(to bottom, #00a7f0, #005f8e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
 }
 
 table {
@@ -218,7 +248,10 @@ canvas {
 </head>
 <body>
 
-<h1>ステップ４：変動損益計算書</h1>
+<div class="header-container">
+  <h1>ステップ４：変動損益計算書</h1>
+  <button id="openOperationStep4">基本操作</button>
+</div>
 
 <div id="control">
   <input type="file" accept=".csv" onchange="uploadCSV(event)">
@@ -856,6 +889,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll("input[type='number'], input[type='text'], select, textarea")
     .forEach(el => el.addEventListener("input", drawStackedChart));
   
+  // 新しいボタンのイベントリスナーを追加
+  // IDをopenOperationStep4に変更したので、ここも修正
+  const openOpStep4Btn = document.getElementById('openOperationStep4'); /* ここを修正しました */
+  if (openOpStep4Btn) {
+    openOpStep4Btn.addEventListener('click', () => {
+      window.open('operation-step４.htm', '_blank'); // 新しいタブで開くファイル名も修正しました
+    });
+  }
 });
 
 // セルに音声属性を適用する関数

@@ -15,13 +15,28 @@ body {
   padding-top: 60px; /* #totalCost の高さに合わせる */
 }
 
+/* h1とボタンを横並びにするためのコンテナスタイル */
+.header-container {
+  display: flex;
+  align-items: center; /* 縦方向の中央揃え */
+  margin-bottom: 15px; /* 下部に余白を追加 */
+}
+
 h1 {
   font-size: 1.4em;
   color: #006c9c;
-  margin-bottom: 0px;
+  margin: 0; /* デフォルトマージンをリセット */
   padding-bottom: 0px;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* タイトルに奥行き */
+  flex-shrink: 0; /* h1が縮まないようにする */
 }
+
+/* ボタンを右寄せにするためのスタイル */
+#openOperationStep1 {
+  margin-left: auto; /* 左側のマージンを自動調整して右に寄せる */
+  white-space: nowrap; /* ボタン内のテキストが改行されないようにする */
+}
+
 
 table {
   border-collapse: collapse;
@@ -134,7 +149,10 @@ button:hover {
   </style>
 </head>
 <body>
-  <h1>ステップ１：単位面積あたり変動費計算ツール</h1>
+  <div class="header-container">
+    <h1>ステップ１：単位面積あたり変動費計算ツール</h1>
+    <button id="openOperationStep1">基本操作</button>
+  </div>
 
   <p>資材価格データ（品名,容量,単位,予約価格）.CSV:</p>
   <input type="file" id="file1" accept=".csv" />
@@ -146,7 +164,6 @@ button:hover {
 <div id="file2-controls">
   <input type="file" id="file2" accept=".csv" />
   <button id="toggleTable2" style="display: none;">表を表示</button>
-  <!-- ここから削除: <button id="calcFile2" style="display: none;">計算する</button> -->
   <button id="toggleMoneyBtn" style="display: none;">金額ありのみ表示</button>
   <button id="saveTable2CsvBtn" style="display: none;">表を保存</button>
 </div>
@@ -197,6 +214,14 @@ window.addEventListener('DOMContentLoaded', () => {
         tableDiv.style.display = 'none';
       }
     });
+
+  // 追加されたボタンのイベントリスナー
+  const openOpStep1Btn = document.getElementById('openOperationStep1');
+  if (openOpStep1Btn) {
+    openOpStep1Btn.addEventListener('click', () => {
+      window.open('operation-step１.htm', '_blank'); // 新しいタブで開く
+    });
+  }
 });
   
 function parseCSV(content) {
