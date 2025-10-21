@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
 
-  <title>単位面積あたり変動費計算</title>
+  <title>ステップ１：単位面積あたり変動費計算</title>
   <style>
 body {
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -134,7 +134,7 @@ button:hover {
   </style>
 </head>
 <body>
-  <h1>単位面積あたり変動費計算ツール</h1>
+  <h1>ステップ１：単位面積あたり変動費計算ツール</h1>
 
   <p>資材価格データ（品名,容量,単位,予約価格）.CSV:</p>
   <input type="file" id="file1" accept=".csv" />
@@ -153,8 +153,8 @@ button:hover {
 
 <div id="totalCost">
   <span>10アールあたり変動費：<span id="costPer10a">―</span> 円</span>
-  <button id="copyCostBtn">コピー</button>
   <button id="calcFile2">計算する</button>
+  <button id="copyCostBtn">コピー</button>
 </div>
 
 <div id="table2" style="display: none;"></div>

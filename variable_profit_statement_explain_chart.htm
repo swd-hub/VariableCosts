@@ -2,10 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="auther" content="澤田泰人">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js"></script>
-<title>変動損益計算書</title>
+<title>ステップ４：変動損益計算書</title>
 <style>
 body {
   font-family: 'Segoe UI', sans-serif;
@@ -217,7 +218,7 @@ canvas {
 </head>
 <body>
 
-<h1>変動損益計算書</h1>
+<h1>ステップ４：変動損益計算書</h1>
 
 <div id="control">
   <input type="file" accept=".csv" onchange="uploadCSV(event)">
@@ -1089,17 +1090,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// データ取り込み
+//データ取り込み
 function importFixedCostsFromStorage() {
   const applyValueToSpecificFixedCostCell = (storageKey, labelText) => {
     const value = localStorage.getItem(storageKey);
     if (value !== null) {
       let fixedCostTable = null;
-      document.querySelectorAll(".summary-table").forEach(table => {
-        if (table.caption && table.caption.textContent.trim() === "固定費") {
-          fixedCostTable = table;
-        }
-      });
+        document.querySelectorAll(".summary-table").forEach(table => {
+            if (table.caption && table.caption.textContent.trim() === "固定費") {
+                fixedCostTable = table;
+            }
+        });
       if (!fixedCostTable) return;
 
       fixedCostTable.querySelectorAll("tr").forEach(row => {
@@ -1118,14 +1119,13 @@ function importFixedCostsFromStorage() {
   // すべての固定費項目を取り込む
   applyValueToSpecificFixedCostCell("laborCostValue", "人件費（円）");
   applyValueToSpecificFixedCostCell("depreciationTotalValue", "減価償却費（円）");
-  applyValueToSpecificFixedCostCell("landRentValue", "支払地代（円）");  // ← 修正
+  applyValueToSpecificFixedCostCell("landRentCostValue", "支払地代（円）");
   applyValueToSpecificFixedCostCell("otherFixedCostValue", "その他固定費（円）");
 
   calculateFixedTotal(); // 固定費を取り込んだ後、全体の再計算と表示更新
 
   alert("固定費データを取り込みました");
 }
-
 
 
 </script>
