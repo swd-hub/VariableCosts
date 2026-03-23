@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/encoding-japanese/encoding.min.js"></script>
+
+  <title>ステップ１：単位面積あたり変動費計算</title>
+  <style>
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background-color: #f7f9fc;
+  color: #333;
+  padding: 30px;
+  line-height: 1.6;
+  padding-top: 60px;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+h1 {
+  font-size: 1.4em;
+  color: #006c9c;
+  margin: 0;
+  padding-bottom: 0px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+#openOperationStep1 {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ✅ ファイル1コントロールのスタイル */
+#file1-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+#file1-controls input[type="file"] {
+  flex: 1;
+}
+
+#file1-controls button {
+  white-space: nowrap;
+}
+
+/* ✅ ファイル名表示用 */
+.file1-name-display {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: #e8f4f8;
+  border: 1px solid #0095d9;
+  border-radius: 6px;
+  color: #006c9c;
+  font-weight: bold;
+  display: none;
+}
+
+.db-status {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 5px;
+}
+
+.db-status.saved {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.db-status.cleared {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.db-status.auto-loaded {
+  color: #0095d9;
+  font-weight: bold;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-top: 20px;
+  font-size: 20px;
+}
+
+th, td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: right;
+  word-break: break-word;
+}
+
+th {
+  background: linear-gradient(to bottom, #e3edf4, #d6e2eb);
+  font-weight: bold;
+  border-bottom: 2px solid #ccc;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+}
+
+th select {
+  width: 100%;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  text-align: right;
+}
+
+td input[type="number"] {
+  width: 60px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: right;
+  font-size: 20px;
+}
+
+tr:hover td {
+  background-color: #f4f8fc;
+}
+
+input[type="number"], input[type="text"] {
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: right;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+button {
+  background: linear-gradient(to bottom, #0095d9, #007bb5);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  margin-right: 8px;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+button:hover {
+  background: linear-gradient(to bottom, #00a7f0, #005f8e);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+}
+
+button.danger {
+  background: linear-gradient(to bottom, #dc3545, #c82333);
+}
+
+button.danger:hover {
+  background: linear-gradient(to bottom, #e74c3c, #c0392b);
+}
+
+#totalCost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to bottom, #f7f9fc, #e3edf4);
+  border-bottom: 2px solid #ccc;
+  padding: 10px;
+  z-index: 1000;
+  font-size: 1.2em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+#totalCost span {
+  flex-shrink: 0;
+}
+
+#totalCost button {
+  font-size: 0.9em;
+}
+
+#table2 table th {
+  position: sticky;
+  top: 80px;
+  background-color: #e3edf4;
+  z-index: 500;
+}
+  </style>
+</head>
+<body>
+  <div class="header-container">
+    <h1>ステップ１：単位面積あたり変動費計算ツール</h1>
+    <button id="openOperationStep1">基本操作</button>
+  </div>
+
+  <p>資材価格データ（品名,容量,単位,予約価格）.CSV:</p>
+  <!-- ✅ ファイル1コントロール -->
+  <div id="file1-controls">
+    <input type="file" id="file1" accept=".csv" />
+    <!-- ✅ ファイル名表示 -->
+    <div class="file1-name-display" id="file1NameDisplay"></div>
+    <!-- ✅ DB解除ボタンのみ -->
+    <button id="clearDBBtn" class="danger" style="display: none;">🗑️ DB解除</button>
+  </div>
+  <!-- ✅ DB状態表示 -->
+  <div id="dbStatus" class="db-status"></div>
+  <button id="toggleTable1" style="display: none;">表を表示</button>
+  <div id="table1"></div>
+<br>
+
+<p> 作物 暦（基準使用量）データ.CSV:</p>
+<div id="file2-controls">
+  <input type="file" id="file2" accept=".csv" />
+  <button id="toggleTable2" style="display: none;">表を表示</button>
+  <button id="toggleMoneyBtn" style="display: none;">▶ 回数1回以上表示</button>
+  <button id="saveTable2CsvBtn" style="display: none;">表を保存</button>
+</div>
+
+<div id="totalCost">
+  <span>10アールあたり変動費：<span id="costPer10a">―</span> 円</span>
+  <button id="calcFile2">計算する</button>
+  <button id="copyCostBtn">コピー</button>
+</div>
+
+<div id="table2" style="display: none;"></div>
+
+<script>
+let priceData = {};
+let file2OriginalName = '';
+let loadedFileName = '';
+const DB_NAME = 'MaterialPriceDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'prices';
+let isAutoLoaded = false;
+
+// ✅ IndexedDB初期化
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+// ✅ DBに保存
+async function savePricesToDB(data, fileName) {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.put({ data, fileName }, 'priceData');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    loadedFileName = fileName;
+    updateDBStatus('💾 DBに保存しました (' + new Date().toLocaleTimeString() + ')', 'saved');
+    console.log('✅ 資材価格データをDBに保存');
+    document.getElementById('clearDBBtn').style.display = 'inline-block';
+    document.getElementById('file1').style.display = 'none';
+    document.getElementById('file1NameDisplay').textContent = `📄 ${fileName}`;
+    document.getElementById('file1NameDisplay').style.display = 'block';
+    isAutoLoaded = true;
+  } catch (err) {
+    console.error('DBへの保存に失敗:', err);
+  }
+}
+
+// ✅ DBから読込
+async function loadPricesFromDB() {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.get('priceData');
+      request.onsuccess = () => {
+        if (request.result) {
+          console.log('✅ DBから資材価格データを読み込み');
+          resolve(request.result);
+        } else {
+          resolve(null);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error('DBからの読み込みに失敗:', err);
+    return null;
+  }
+}
+
+// ✅ DBをクリア
+async function clearPricesDB() {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    await new Promise((resolve, reject) => {
+      const request = store.delete('priceData');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    priceData = {};
+    loadedFileName = '';
+    isAutoLoaded = false;
+    updateDBStatus('🗑️ DBをクリアしました。自動読み込みを終了します。', 'cleared');
+    document.getElementById('clearDBBtn').style.display = 'none';
+    document.getElementById('file1').style.display = 'block';
+    document.getElementById('file1NameDisplay').style.display = 'none';
+    document.getElementById('file1NameDisplay').textContent = '';
+    document.getElementById('table1').innerHTML = '';
+    document.getElementById('table1').style.display = 'none';
+    document.getElementById('toggleTable1').style.display = 'none';
+    console.log('✅ DB削除完了 & 自動読み込み終了');
+  } catch (err) {
+    console.error('DB削除に失敗:', err);
+  }
+}
+
+// ✅ DB状態表示更新
+function updateDBStatus(message, className = 'saved') {
+  const statusDiv = document.getElementById('dbStatus');
+  statusDiv.textContent = message;
+  statusDiv.className = `db-status ${className}`;
+}
+
+// ✅ 自動読み込み処理
+async function autoLoadFromFetchOrDB() {
+  // 1. DB存在チェック
+  const dbData = await loadPricesFromDB();
+  
+  if (dbData) {
+    // DB存在 → DBから読み込み
+    priceData = dbData.data;
+    loadedFileName = dbData.fileName;
+    isAutoLoaded = true;
+    updateDBStatus('📂 DBから自動読み込み済み (' + new Date().toLocaleTimeString() + ')', 'auto-loaded');
+    console.log('✅ DBから自動読み込みしました');
+    document.getElementById('clearDBBtn').style.display = 'inline-block';
+    document.getElementById('file1').style.display = 'none';
+    document.getElementById('file1NameDisplay').textContent = `📄 ${loadedFileName}`;
+    document.getElementById('file1NameDisplay').style.display = 'block';
+    displayFile1Table();
+    return;
+  }
+  
+  // 2. DB未存在 → fetchで資材価格.csvを読み込み
+  console.log('DB未存在 → 資材価格.csv をfetchしています...');
+  
+  fetch('資材価格.csv')
+    .then(response => {
+      if (!response.ok) {
+        console.warn('資材価格.csv の自動読み込みに失敗。ユーザーが手動選択できます。');
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
+        to: 'UNICODE',
+        from: 'SJIS'
+      });
+      const text = Encoding.codeToString(unicodeArray);
+      console.log('✅ 資材価格.csv を自動読み込みしました');
+      loadedFileName = '資材価格.csv';
+      handleFile1Load(text);
+      // ✅ 自動読み込み後、DBに保存
+      setTimeout(() => {
+        savePricesToDB(priceData, loadedFileName);
+      }, 100);
+    })
+    .catch(err => {
+      console.warn('自動fetch失敗（想定内）:', err.message);
+      console.log('💡 ユーザーがファイル選択で手動選択できます');
+    });
+}
+
+// ✅ File1テーブル表示（DB読み込み用）
+function displayFile1Table() {
+  const toggleBtn = document.getElementById('toggleTable1');
+  const tableDiv = document.getElementById('table1');
+  
+  if (Object.keys(priceData).length === 0) {
+    return;
+  }
+  
+  // priceDataから疑似CSVを再構築して表示
+  const rows = [['費目', '品名', '容量', '単位', '予約参考価格']];
+  Object.entries(priceData).forEach(([name, info]) => {
+    rows.push(['', name, info.volume, info.unit, info.price]);
+  });
+  
+  const table = createTableForFile1(rows);
+  if (tableDiv) {
+    tableDiv.innerHTML = '';
+    tableDiv.appendChild(table);
+    tableDiv.style.display = 'block';
+  }
+  
+  if (toggleBtn) {
+    toggleBtn.style.display = 'inline';
+    toggleBtn.textContent = '▼ 表示しない';
+  }
+}
+
+// ✅ DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () => {
+  // ✅ 1. 自動読み込み処理実行（DB優先）
+  await autoLoadFromFetchOrDB();
+  
+  const openOpStep1Btn = document.getElementById('openOperationStep1');
+  if (openOpStep1Btn) {
+    openOpStep1Btn.addEventListener('click', () => {
+      window.open('operation-step１.htm', '_blank');
+    });
+  }
+
+  const file1Input = document.getElementById('file1');
+  if (file1Input) {
+    file1Input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        loadedFileName = file.name;
+      }
+      handleFile1Load(e);
+    });
+  }
+
+  const file2Input = document.getElementById('file2');
+  if (file2Input) {
+    file2Input.addEventListener('change', handleFile2Load);
+  }
+
+  const toggleTable1Btn = document.getElementById('toggleTable1');
+  const table1Div = document.getElementById('table1');
+  if (toggleTable1Btn && table1Div) {
+    toggleTable1Btn.addEventListener('click', () => {
+      const isVisible = getComputedStyle(table1Div).display !== 'none';
+      table1Div.style.display = isVisible ? 'none' : 'block';
+      toggleTable1Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+    });
+  }
+
+  // ✅ DB解除ボタン
+  const clearDBBtn = document.getElementById('clearDBBtn');
+  if (clearDBBtn) {
+    clearDBBtn.addEventListener('click', async () => {
+      if (confirm('DBのデータを削除して、自動読み込みを終了しますか？')) {
+        await clearPricesDB();
+      }
+    });
+  }
+});
+
+function parseCSV(content) {
+  return content
+    .trim()
+    .split('\n')
+    .map(row => row.split(',').map(cell => cell.trim()))
+    .map(row => {
+      while (row.length > 0 && row[row.length - 1] === '') row.pop();
+      return row;
+    })
+    .filter(row => row.length > 0);
+}
+
+function createTable(data) {
+  const table = document.createElement('table');
+  const headerRow = data[0];
+  let calcColIndex = headerRow.indexOf('回数');
+  if (calcColIndex === -1) {
+    headerRow.push('金額');
+    calcColIndex = headerRow.length - 1;
+  } else {
+    calcColIndex += 1;
+    headerRow.splice(calcColIndex, 0, '金額');
+  }
+
+  const newHeader = [...headerRow];
+  const newData = data.slice(1).map(row => {
+    const newRow = [...row];
+    if (newHeader.includes('金額')) {
+      newRow.splice(calcColIndex, 0, '');
+    } else {
+      newRow.push('');
+    }
+    return newRow;
+  });
+
+  const finalData = [newHeader, ...newData];
+  const remarkColIndex = newHeader.indexOf('備考');
+  const remarkValues = remarkColIndex !== -1 ? [...new Set(
+    finalData.slice(1).map(row => row[remarkColIndex]).filter(v => v)
+  )].sort() : [];
+
+  // ヘッダー行
+  const trHeader = document.createElement('tr');
+  newHeader.forEach(colName => {
+    const th = document.createElement('th');
+    th.textContent = colName;
+    trHeader.appendChild(th);
+  });
+  table.appendChild(trHeader);
+
+  // フィルター行
+  if (remarkColIndex !== -1) {
+    const trFilter = document.createElement('tr');
+    newHeader.forEach((colName, colIndex) => {
+      const td = document.createElement('td');
+      td.style.textAlign = 'center';
+      if (colIndex === remarkColIndex && remarkValues.length > 0) {
+        const select = document.createElement('select');
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '▼ 備考フィルター';
+        select.appendChild(defaultOption);
+
+        remarkValues.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = `▼ ${value}`;
+          select.appendChild(option);
+        });
+
+        select.addEventListener('change', function () {
+          const keyword = this.value;
+          const allRows = table.querySelectorAll('tr');
+          allRows.forEach((r, i) => {
+            if (i <= 1) return;
+            const cell = r.querySelectorAll('td')[remarkColIndex];
+            const text = cell?.textContent?.trim() || '';
+            r.style.display = keyword === '' || text === keyword ? '' : 'none';
+          });
+        });
+
+        td.appendChild(select);
+      }
+      trFilter.appendChild(td);
+    });
+    table.appendChild(trFilter);
+  }
+
+  // データ行
+  finalData.slice(1).forEach(row => {
+    const tr = document.createElement('tr');
+    newHeader.forEach((colName, colIndex) => {
+      const cellValue = row[colIndex] ?? '';
+      const td = document.createElement('td');
+      td.style.textAlign = 'right';
+
+      if (colName === '回数') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.value = cellValue;
+        input.style.width = '60px';
+        input.style.textAlign = 'right';
+        td.appendChild(input);
+      } else if (colName === '１０アール量') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = 'any';
+        input.value = cellValue;
+        input.style.width = '80px';
+        input.style.textAlign = 'right';
+        td.appendChild(input);
+      } else if (colName === '金額') {
+        td.textContent = '―';
+      } else {
+        td.textContent = cellValue;
+      }
+
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  return table;
+}
+
+function createTableForFile1(data) {
+  const table = document.createElement('table');
+  const maxCols = Math.max(...data.map(row => row.length));
+
+  let actualCategoryIndex = -1;
+  if (data.length > 0) {
+    const headerRow = data[0];
+    actualCategoryIndex = headerRow.indexOf('費目');
+    if (actualCategoryIndex === -1 && headerRow.length > 0) {
+      actualCategoryIndex = 0;
+    }
+  }
+
+  const categoryValues = actualCategoryIndex !== -1 ? [...new Set(data.slice(1).map(row => row[actualCategoryIndex]).filter(v => v))].sort() : [];
+
+  data.forEach((row, rowIndex) => {
+    const tr = document.createElement('tr');
+
+    for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+      const tag = rowIndex === 0 ? 'th' : 'td';
+      const td = document.createElement(tag);
+      td.style.textAlign = 'right';
+
+      if (colIndex === actualCategoryIndex) {
+        td.style.textAlign = 'left';
+      }
+
+      if (rowIndex === 0 && colIndex === actualCategoryIndex && actualCategoryIndex !== -1) {
+        const select = document.createElement('select');
+        select.style.width = '100%';
+
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '▼ 費目フィルター';
+        select.appendChild(defaultOption);
+
+        categoryValues.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = `▼ ${value}`;
+          select.appendChild(option);
+        });
+
+        select.addEventListener('change', function () {
+          const keyword = this.value;
+          const allRows = table.querySelectorAll('tr');
+          allRows.forEach((r, i) => {
+            if (i === 0) return;
+            const cell = r.querySelectorAll('td')[actualCategoryIndex];
+            const text = cell?.textContent?.trim() || '';
+            r.style.display = keyword === '' || text === keyword ? '' : 'none';
+          });
+        });
+
+        td.appendChild(select);
+      } else {
+        td.textContent = row[colIndex] ?? '';
+      }
+
+      tr.appendChild(td);
+    }
+
+    table.appendChild(tr);
+  });
+
+  return table;
+}
+
+function handleFile1Load(eOrText) {
+  let contentText = '';
+  const toggleBtn = document.getElementById('toggleTable1');
+  const tableDiv = document.getElementById('table1');
+
+  if (typeof eOrText === 'string') {
+    contentText = eOrText;
+    processFile1Data(parseCSV(contentText), toggleBtn, tableDiv);
+  } else {
+    const file = eOrText.target.files[0];
+
+    if (!file) {
+      if (toggleBtn) toggleBtn.style.display = 'none';
+      if (tableDiv) tableDiv.style.display = 'none';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      const rows = parseCSV(reader.result);
+      processFile1Data(rows, toggleBtn, tableDiv);
+    };
+    reader.readAsText(file, 'Shift_JIS');
+  }
+}
+
+function processFile1Data(rows, toggleBtn, tableDiv) {
+  if (rows.length < 1) {
+    console.error("資材価格ファイルに有効なデータがありません。");
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (tableDiv) tableDiv.style.display = 'none';
+    return;
+  }
+
+  priceData = {};
+
+  rows.slice(1).forEach(row => {
+    const name = (row[1] || '').trim();
+    const volume = parseFloat((row[2] || '').replace(/,/g, ''));
+    const unit = (row[3] || '').trim();
+    const price = parseFloat((row[4] || '').replace(/,/g, ''));
+
+    if (name && !isNaN(price) && !isNaN(volume) && unit) {
+      priceData[name] = { price, volume, unit };
+    }
+  });
+
+  const table = createTableForFile1(rows);
+  if (tableDiv) {
+    tableDiv.innerHTML = '';
+    tableDiv.appendChild(table);
+    tableDiv.style.display = 'block';
+  }
+
+  if (toggleBtn) {
+    toggleBtn.style.display = 'inline';
+    toggleBtn.textContent = '▼ 表示しない';
+  }
+
+  // ✅ 手動選択時 → DBに保存
+  if (!isAutoLoaded) {
+    savePricesToDB(priceData, loadedFileName);
+  }
+}
+
+function handleFile2Load(e) {
+  const file = e.target.files[0];
+  const toggleTable2Btn = document.getElementById('toggleTable2');
+  const calcBtn = document.getElementById('calcFile2');
+  const moneyBtn = document.getElementById('toggleMoneyBtn');
+  const saveBtn = document.getElementById('saveTable2CsvBtn');
+  const table2Div = document.getElementById('table2');
+
+  if (!file) {
+    if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
+    if (calcBtn) calcBtn.style.display = 'none';
+    if (moneyBtn) moneyBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (table2Div) table2Div.style.display = 'none';
+    file2OriginalName = '';
+    return;
+  }
+
+  file2OriginalName = file.name.replace(/\.csv$/i, '');
+
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const rows = parseCSV(reader.result).filter(r => r.length > 0 && r[0]);
+
+    if (rows.length === 0) {
+      console.error("⚠️ file2 に有効なデータ行がありません！");
+      if (toggleTable2Btn) toggleTable2Btn.style.display = 'none';
+      if (calcBtn) calcBtn.style.display = 'none';
+      if (moneyBtn) moneyBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'none';
+      if (table2Div) table2Div.style.display = 'none';
+      return;
+    }
+
+    const header = rows[0];
+    const body = rows.slice(1);
+
+    const table = createTable([header, ...body]);
+    if (table2Div) {
+      table2Div.innerHTML = '';
+      table2Div.appendChild(table);
+      table2Div.style.display = 'block';
+    }
+
+    if (toggleTable2Btn) {
+      toggleTable2Btn.style.display = 'inline-block';
+      toggleTable2Btn.textContent = '▼ 表示しない';
+
+      if (toggleTable2Btn._eventListener) {
+        toggleTable2Btn.removeEventListener('click', toggleTable2Btn._eventListener);
+      }
+
+      const newToggleListener = () => {
+        const table2 = document.getElementById('table2');
+        const calcBtnRef = document.getElementById('calcFile2');
+        if (!table2) return;
+
+        const isVisible = getComputedStyle(table2).display !== 'none';
+        table2.style.display = isVisible ? 'none' : 'block';
+        toggleTable2Btn.textContent = isVisible ? '▶ 表を表示' : '▼ 表示しない';
+
+        if (calcBtnRef) {
+          calcBtnRef.style.display = isVisible ? 'none' : 'inline-block';
+        }
+      };
+      toggleTable2Btn.addEventListener('click', newToggleListener);
+      toggleTable2Btn._eventListener = newToggleListener;
+    }
+
+    const costSpan = document.getElementById('costPer10a');
+    if (costSpan) costSpan.textContent = '—';
+
+    if (calcBtn) calcBtn.style.display = 'inline-block';
+
+    if (moneyBtn) {
+      moneyBtn.style.display = 'inline-block';
+      moneyBtn.textContent = '▶ 回数1回以上表示';
+
+      if (moneyBtn._eventListener) {
+        moneyBtn.removeEventListener('click', moneyBtn._eventListener);
+      }
+
+      let showOnlyWithCount = false;
+
+      const moneyBtnClickHandler = () => {
+        const tableEl = document.querySelector('#table2 table');
+        if (!tableEl) return;
+
+        const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
+        const countIndex = headers.indexOf('回数');
+        const nameIndex = headers.indexOf('品名');
+        
+        if (countIndex === -1) {
+          console.warn('回数列が見つかりません。');
+          return;
+        }
+
+        showOnlyWithCount = !showOnlyWithCount;
+
+        const rows = tableEl.querySelectorAll('tr');
+        rows.forEach((tr, i) => {
+          if (i === 0) return;
+          
+          const cells = tr.querySelectorAll('td');
+          const name = cells[nameIndex]?.textContent?.trim() || '';
+          
+          // ✅ 「目標収量」は常に表示
+          if (name === '目標収量') {
+            tr.style.display = '';
+            return;
+          }
+          
+          const countInput = cells[countIndex]?.querySelector('input');
+          const count = parseFloat(countInput?.value || 0);
+          const hasCount = count >= 1;
+
+          tr.style.display = (!showOnlyWithCount || hasCount) ? '' : 'none';
+        });
+
+        moneyBtn.textContent = showOnlyWithCount ? '▼ 全て表示する' : '▶ 回数1回以上表示';
+      };
+
+      moneyBtn.addEventListener('click', moneyBtnClickHandler);
+      moneyBtn._eventListener = moneyBtnClickHandler;
+    }
+
+    if (saveBtn) {
+      saveBtn.style.display = 'inline-block';
+    }
+  };
+
+  reader.readAsText(file, 'Shift_JIS');
+}
+
+document.getElementById('calcFile2').addEventListener('click', function () {
+  const table = document.querySelector('#table2 table');
+  if (!table) {
+    console.error('⚠️ 表がまだ表示されていません。');
+    return;
+  }
+
+  const headers = Array.from(table.querySelector('tr').querySelectorAll('th')).map(th => th.textContent);
+  const idx = {
+    name: headers.indexOf('品名'),
+    amountPer10a: headers.indexOf('１０アール量'),
+    unit: headers.indexOf('単位'),
+    count: headers.indexOf('回数'),
+    price: headers.indexOf('金額')
+  };
+
+  const rows = Array.from(table.querySelectorAll('tr')).slice(2);
+  let total = 0;
+
+  rows.forEach(row => {
+    if (row.style.display === 'none') return;
+    
+    const cells = row.querySelectorAll('td');
+    const name = cells[idx.name]?.textContent.trim();
+
+    const amountInput = cells[idx.amountPer10a]?.querySelector('input');
+    const amountPer10a = parseFloat(amountInput?.value || 0);
+    const unit = cells[idx.unit]?.textContent.trim();
+    const countInput = cells[idx.count]?.querySelector('input');
+    const count = parseFloat(countInput?.value || 0);
+    const priceCell = cells[idx.price];
+
+    const info = priceData[name];
+    if (!info || isNaN(info.price) || isNaN(info.volume)) {
+      priceCell.textContent = '―';
+      return;
+    }
+
+    const factor = getUnitConversionFactor(unit, info.unit);
+    if (factor === null) {
+      priceCell.textContent = '単位不一致';
+      return;
+    }
+
+    const adjustedAmount = amountPer10a * factor;
+    const unitPrice = info.price / info.volume;
+    const amount = unitPrice * adjustedAmount * count;
+
+    if (isNaN(amount)) {
+      priceCell.textContent = '―';
+    } else if (amount === 0) {
+      priceCell.textContent = '0';
+    } else {
+      priceCell.textContent = Math.round(amount).toLocaleString();
+    }
+
+    if (count > 0 && !isNaN(amount)) {
+      total += amount;
+    }
+  });
+
+  const costSpan = document.getElementById('costPer10a');
+  if (costSpan) costSpan.textContent = Math.round(total).toLocaleString();
+});
+
+document.getElementById('copyCostBtn')?.addEventListener('click', () => {
+  const raw = document.getElementById('costPer10a')?.textContent?.trim();
+  if (raw && raw !== '―') {
+    const numericValue = raw.replace(/,/g, '');
+    navigator.clipboard.writeText(numericValue)
+      .then(() => console.log('✅ 変動費の数値をコピーしました'))
+      .catch(() => console.error('コピーに失敗しました'));
+  }
+});
+
+document.getElementById('saveTable2CsvBtn').addEventListener('click', saveTable2SelectedToCSV);
+
+function saveTable2SelectedToCSV() {
+  const table = document.querySelector('#table2 table');
+  if (!table) {
+    console.error('表が見つかりません');
+    return;
+  }
+
+  const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+  const idx = {
+    name: headers.indexOf('品名'),
+    amount: headers.indexOf('１０アール量'),
+    unit: headers.indexOf('単位'),
+    count: headers.indexOf('回数'),
+    price: headers.indexOf('金額'),
+    remark: headers.indexOf('備考')
+  };
+
+  const selectedHeader = ['品名', '１０アール量', '単位', '回数', '金額'];
+  if (idx.remark !== -1) selectedHeader.push('備考');
+
+  const csvRows = [selectedHeader];
+
+  const rows = table.querySelectorAll('tr');
+  rows.forEach((tr, i) => {
+    if (i === 0 || tr.querySelector('select')) return;
+    if (tr.style.display === 'none') return;
+
+    const cells = tr.querySelectorAll('td');
+    const rowData = [];
+
+    const name = cells[idx.name]?.textContent.trim();
+    const amount = cells[idx.amount]?.querySelector('input')?.value?.trim() ?? cells[idx.amount]?.textContent?.trim() ?? '';
+    const unit = cells[idx.unit]?.textContent.trim();
+    const count = cells[idx.count]?.querySelector('input')?.value?.trim() ?? cells[idx.count]?.textContent?.trim() ?? '';
+    const priceRaw = cells[idx.price]?.querySelector('input')?.value?.trim() ?? cells[idx.price]?.textContent?.trim() ?? '';
+    const remark = (idx.remark !== -1 && cells[idx.remark]) ? cells[idx.remark]?.textContent?.trim() ?? '' : '';
+
+    let price = (priceRaw ?? '').trim();
+    if (price === '―' || price === '—' || price === '') {
+      price = '0';
+    } else {
+      price = String(price).replace(/[,，\s　]|円|円（税込）/g, '');
+      price = price.replace(/[^\d.\-]/g, '');
+      if (price === '') price = '0';
+    }
+
+    rowData.push(name, amount, unit, count, price);
+    if (idx.remark !== -1) {
+      rowData.push(remark);
+    }
+    csvRows.push(rowData);
+  });
+
+  const csv = csvRows.map(row =>
+    row.map((cell, i) => {
+      const headerName = selectedHeader[i] || '';
+      const rawCell = String(cell ?? '');
+
+      if (headerName === '金額') {
+        const num = rawCell.replace(/[,，\s　]/g, '');
+        return num === '' ? '0' : num;
+      }
+
+      const processedCell = rawCell.replace(/"/g, '""');
+      if (processedCell.includes(',') || processedCell.includes('\n') || processedCell.includes('"') || /\s/.test(processedCell) || /　/.test(processedCell)) {
+        return `"${processedCell}"`;
+      }
+      return processedCell;
+    }).join(',')
+  ).join('\r\n');
+
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
+  const baseName = file2OriginalName || '表2';
+  const filename = `${baseName}_${timestamp}.csv`;
+
+  const sjisArray = Encoding.convert(Encoding.stringToCode(csv), {
+    to: 'SJIS',
+    from: 'UNICODE'
+  });
+  const blob = new Blob([new Uint8Array(sjisArray)], { type: 'text/csv;charset=Shift_JIS' });
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function normalizeUnit(unit) {
+  if (!unit) return '';
+  unit = unit.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+  return unit.toUpperCase().trim();
+}
+
+function getUnitConversionFactor(fromUnit, toUnit) {
+  var uFrom = normalizeUnit(fromUnit);
+  var uTo = normalizeUnit(toUnit);
+
+  if (uFrom === uTo) return 1;
+
+  var table = {
+    'L': { 'ML': 1000 },
+    'ML': { 'L': 1 / 1000 },
+    'KG': { 'G': 1000, 'T': 1 / 1000 },
+    'G': { 'KG': 1 / 1000, 'T': 1 / 1000000 },
+    'T': { 'KG': 1000, 'G': 1000000 }
+  };
+
+  return (table[uFrom] && table[uFrom][uTo]) ? table[uFrom][uTo] : null;
+}
+  </script>
+</body>
+</html>
