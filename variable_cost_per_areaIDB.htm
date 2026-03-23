@@ -35,7 +35,6 @@ h1 {
   white-space: nowrap;
 }
 
-/* ✅ ファイル1コントロールのスタイル */
 #file1-controls {
   display: flex;
   gap: 10px;
@@ -51,7 +50,6 @@ h1 {
   white-space: nowrap;
 }
 
-/* ✅ ファイル名表示用 */
 .file1-name-display {
   flex: 1;
   padding: 8px 12px;
@@ -205,15 +203,11 @@ button.danger:hover {
   </div>
 
   <p>資材価格データ（品名,容量,単位,予約価格）.CSV:</p>
-  <!-- ✅ ファイル1コントロール -->
   <div id="file1-controls">
     <input type="file" id="file1" accept=".csv" />
-    <!-- ✅ ファイル名表示 -->
     <div class="file1-name-display" id="file1NameDisplay"></div>
-    <!-- ✅ DB解除ボタンのみ -->
     <button id="clearDBBtn" class="danger" style="display: none;">🗑️ DB解除</button>
   </div>
-  <!-- ✅ DB状態表示 -->
   <div id="dbStatus" class="db-status"></div>
   <button id="toggleTable1" style="display: none;">表を表示</button>
   <div id="table1"></div>
@@ -239,6 +233,7 @@ button.danger:hover {
 let priceData = {};
 let file2OriginalName = '';
 let loadedFileName = '';
+let csvFullData = [];
 const DB_NAME = 'MaterialPriceDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'prices';
@@ -248,10 +243,8 @@ let isAutoLoaded = false;
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -262,18 +255,19 @@ function initDB() {
 }
 
 // ✅ DBに保存
-async function savePricesToDB(data, fileName) {
+async function savePricesToDB(data, fileName, csvData) {
   try {
     const db = await initDB();
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     
     await new Promise((resolve, reject) => {
-      const request = store.put({ data, fileName }, 'priceData');
+      const request = store.put({ data, fileName, csvData }, 'priceData');
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
     
+    csvFullData = csvData;
     loadedFileName = fileName;
     updateDBStatus('💾 DBに保存しました (' + new Date().toLocaleTimeString() + ')', 'saved');
     console.log('✅ 資材価格データをDBに保存');
@@ -326,6 +320,7 @@ async function clearPricesDB() {
     });
     
     priceData = {};
+    csvFullData = [];
     loadedFileName = '';
     isAutoLoaded = false;
     updateDBStatus('🗑️ DBをクリアしました。自動読み込みを終了します。', 'cleared');
@@ -351,12 +346,11 @@ function updateDBStatus(message, className = 'saved') {
 
 // ✅ 自動読み込み処理
 async function autoLoadFromFetchOrDB() {
-  // 1. DB存在チェック
   const dbData = await loadPricesFromDB();
   
   if (dbData) {
-    // DB存在 → DBから読み込み
     priceData = dbData.data;
+    csvFullData = dbData.csvData || [];
     loadedFileName = dbData.fileName;
     isAutoLoaded = true;
     updateDBStatus('📂 DBから自動読み込み済み (' + new Date().toLocaleTimeString() + ')', 'auto-loaded');
@@ -369,53 +363,36 @@ async function autoLoadFromFetchOrDB() {
     return;
   }
   
-  // 2. DB未存在 → fetchで資材価格.csvを読み込み
   console.log('DB未存在 → 資材価格.csv をfetchしています...');
   
   fetch('資材価格.csv')
     .then(response => {
-      if (!response.ok) {
-        console.warn('資材価格.csv の自動読み込みに失敗。ユーザーが手動選択できます。');
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.arrayBuffer();
     })
     .then(buffer => {
-      const unicodeArray = Encoding.convert(new Uint8Array(buffer), {
-        to: 'UNICODE',
-        from: 'SJIS'
-      });
+      const unicodeArray = Encoding.convert(new Uint8Array(buffer), { to: 'UNICODE', from: 'SJIS' });
       const text = Encoding.codeToString(unicodeArray);
       console.log('✅ 資材価格.csv を自動読み込みしました');
       loadedFileName = '資材価格.csv';
       handleFile1Load(text);
-      // ✅ 自動読み込み後、DBに保存
       setTimeout(() => {
-        savePricesToDB(priceData, loadedFileName);
+        savePricesToDB(priceData, loadedFileName, csvFullData);
       }, 100);
     })
     .catch(err => {
       console.warn('自動fetch失敗（想定内）:', err.message);
-      console.log('💡 ユーザーがファイル選択で手動選択できます');
     });
 }
 
-// ✅ File1テーブル表示（DB読み込み用）
+// ✅ File1テーブル表示
 function displayFile1Table() {
   const toggleBtn = document.getElementById('toggleTable1');
   const tableDiv = document.getElementById('table1');
   
-  if (Object.keys(priceData).length === 0) {
-    return;
-  }
+  if (csvFullData.length === 0) return;
   
-  // priceDataから疑似CSVを再構築して表示
-  const rows = [['費目', '品名', '容量', '単位', '予約参考価格']];
-  Object.entries(priceData).forEach(([name, info]) => {
-    rows.push(['', name, info.volume, info.unit, info.price]);
-  });
-  
-  const table = createTableForFile1(rows);
+  const table = createTableForFile1(csvFullData);
   if (tableDiv) {
     tableDiv.innerHTML = '';
     tableDiv.appendChild(table);
@@ -428,9 +405,88 @@ function displayFile1Table() {
   }
 }
 
+// ✅ フィルター機能付きテーブル作成関数
+function createTableForFile1(data) {
+  const table = document.createElement('table');
+  const maxCols = Math.max(...data.map(row => row.length));
+
+  let actualCategoryIndex = -1;
+  if (data.length > 0) {
+    const headerRow = data[0];
+    actualCategoryIndex = headerRow.indexOf('費目');
+    if (actualCategoryIndex === -1 && headerRow.length > 0) {
+      actualCategoryIndex = 0;
+    }
+  }
+
+  const categoryValues = actualCategoryIndex !== -1 ? [...new Set(data.slice(1).map(row => row[actualCategoryIndex]).filter(v => v))].sort() : [];
+
+  // ✅ ヘッダー行
+  const trHeader = document.createElement('tr');
+  data[0].forEach((colName, colIndex) => {
+    const th = document.createElement('th');
+    th.textContent = colName;
+    th.style.textAlign = colIndex === actualCategoryIndex ? 'left' : 'right';
+    trHeader.appendChild(th);
+  });
+  table.appendChild(trHeader);
+
+  // ✅ フィルター行
+  const trFilter = document.createElement('tr');
+  for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+    const td = document.createElement('td');
+    td.style.textAlign = 'center';
+
+    if (colIndex === actualCategoryIndex && categoryValues.length > 0) {
+      const select = document.createElement('select');
+      select.style.width = '100%';
+
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = '▼ 費目フィルター';
+      select.appendChild(defaultOption);
+
+      categoryValues.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = `▼ ${value}`;
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', function () {
+        const keyword = this.value;
+        const allRows = table.querySelectorAll('tr');
+        allRows.forEach((r, i) => {
+          if (i <= 1) return;
+          const cell = r.querySelectorAll('td')[actualCategoryIndex];
+          const text = cell?.textContent?.trim() || '';
+          r.style.display = keyword === '' || text === keyword ? '' : 'none';
+        });
+      });
+
+      td.appendChild(select);
+    }
+    trFilter.appendChild(td);
+  }
+  table.appendChild(trFilter);
+
+  // ✅ データ行
+  data.slice(1).forEach(row => {
+    const tr = document.createElement('tr');
+    row.forEach((cellValue, colIndex) => {
+      const td = document.createElement('td');
+      td.textContent = cellValue ?? '';
+      td.style.textAlign = colIndex === actualCategoryIndex ? 'left' : 'right';
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  return table;
+}
+
 // ✅ DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () => {
-  // ✅ 1. 自動読み込み処理実行（DB優先）
   await autoLoadFromFetchOrDB();
   
   const openOpStep1Btn = document.getElementById('openOperationStep1');
@@ -444,9 +500,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (file1Input) {
     file1Input.addEventListener('change', (e) => {
       const file = e.target.files[0];
-      if (file) {
-        loadedFileName = file.name;
-      }
+      if (file) loadedFileName = file.name;
       handleFile1Load(e);
     });
   }
@@ -466,7 +520,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ✅ DB解除ボタン
   const clearDBBtn = document.getElementById('clearDBBtn');
   if (clearDBBtn) {
     clearDBBtn.addEventListener('click', async () => {
@@ -518,7 +571,6 @@ function createTable(data) {
     finalData.slice(1).map(row => row[remarkColIndex]).filter(v => v)
   )].sort() : [];
 
-  // ヘッダー行
   const trHeader = document.createElement('tr');
   newHeader.forEach(colName => {
     const th = document.createElement('th');
@@ -527,7 +579,6 @@ function createTable(data) {
   });
   table.appendChild(trHeader);
 
-  // フィルター行
   if (remarkColIndex !== -1) {
     const trFilter = document.createElement('tr');
     newHeader.forEach((colName, colIndex) => {
@@ -565,7 +616,6 @@ function createTable(data) {
     table.appendChild(trFilter);
   }
 
-  // データ行
   finalData.slice(1).forEach(row => {
     const tr = document.createElement('tr');
     newHeader.forEach((colName, colIndex) => {
@@ -598,74 +648,6 @@ function createTable(data) {
 
       tr.appendChild(td);
     });
-    table.appendChild(tr);
-  });
-
-  return table;
-}
-
-function createTableForFile1(data) {
-  const table = document.createElement('table');
-  const maxCols = Math.max(...data.map(row => row.length));
-
-  let actualCategoryIndex = -1;
-  if (data.length > 0) {
-    const headerRow = data[0];
-    actualCategoryIndex = headerRow.indexOf('費目');
-    if (actualCategoryIndex === -1 && headerRow.length > 0) {
-      actualCategoryIndex = 0;
-    }
-  }
-
-  const categoryValues = actualCategoryIndex !== -1 ? [...new Set(data.slice(1).map(row => row[actualCategoryIndex]).filter(v => v))].sort() : [];
-
-  data.forEach((row, rowIndex) => {
-    const tr = document.createElement('tr');
-
-    for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-      const tag = rowIndex === 0 ? 'th' : 'td';
-      const td = document.createElement(tag);
-      td.style.textAlign = 'right';
-
-      if (colIndex === actualCategoryIndex) {
-        td.style.textAlign = 'left';
-      }
-
-      if (rowIndex === 0 && colIndex === actualCategoryIndex && actualCategoryIndex !== -1) {
-        const select = document.createElement('select');
-        select.style.width = '100%';
-
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = '▼ 費目フィルター';
-        select.appendChild(defaultOption);
-
-        categoryValues.forEach(value => {
-          const option = document.createElement('option');
-          option.value = value;
-          option.textContent = `▼ ${value}`;
-          select.appendChild(option);
-        });
-
-        select.addEventListener('change', function () {
-          const keyword = this.value;
-          const allRows = table.querySelectorAll('tr');
-          allRows.forEach((r, i) => {
-            if (i === 0) return;
-            const cell = r.querySelectorAll('td')[actualCategoryIndex];
-            const text = cell?.textContent?.trim() || '';
-            r.style.display = keyword === '' || text === keyword ? '' : 'none';
-          });
-        });
-
-        td.appendChild(select);
-      } else {
-        td.textContent = row[colIndex] ?? '';
-      }
-
-      tr.appendChild(td);
-    }
-
     table.appendChild(tr);
   });
 
@@ -707,6 +689,7 @@ function processFile1Data(rows, toggleBtn, tableDiv) {
   }
 
   priceData = {};
+  csvFullData = rows;
 
   rows.slice(1).forEach(row => {
     const name = (row[1] || '').trim();
@@ -731,9 +714,8 @@ function processFile1Data(rows, toggleBtn, tableDiv) {
     toggleBtn.textContent = '▼ 表示しない';
   }
 
-  // ✅ 手動選択時 → DBに保存
   if (!isAutoLoaded) {
-    savePricesToDB(priceData, loadedFileName);
+    savePricesToDB(priceData, loadedFileName, csvFullData);
   }
 }
 
@@ -844,7 +826,6 @@ function handleFile2Load(e) {
           const cells = tr.querySelectorAll('td');
           const name = cells[nameIndex]?.textContent?.trim() || '';
           
-          // ✅ 「目標収量」は常に表示
           if (name === '目標収量') {
             tr.style.display = '';
             return;
