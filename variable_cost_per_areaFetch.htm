@@ -644,59 +644,68 @@ function handleFile2Load(e) {
     if (calcBtn) calcBtn.style.display = 'inline-block';
 
     // ✅ 金額トグルボタン表示＆イベント登録（安全処理）
-    if (moneyBtn) {
-        moneyBtn.style.display = 'inline-block';
-        moneyBtn.textContent = '▶ 金額ありのみ表示';
+if (moneyBtn) {
+  moneyBtn.style.display = 'inline-block';
+  moneyBtn.textContent = '▶ 金額ありのみ表示';
 
-        if (moneyBtn._eventListener) {
-            moneyBtn.removeEventListener('click', moneyBtn._eventListener);
-        }
+  if (moneyBtn._eventListener) {
+    moneyBtn.removeEventListener('click', moneyBtn._eventListener);
+  }
 
-        let showOnlyPriced = false;
+  let showOnlyPriced = false;
 
-        const moneyBtnClickHandler = () => {
-            const tableEl = document.querySelector('#table2 table');
-            if (!tableEl) return;
+  const moneyBtnClickHandler = () => {
+    const tableEl = document.querySelector('#table2 table');
+    if (!tableEl) return;
 
-            const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
-            const priceIndex = headers.indexOf('金額');
-            if (priceIndex === -1) {
-              console.warn('金額列が見つかりません。');
-              return;
-            }
-
-            showOnlyPriced = !showOnlyPriced;
-
-            const rows = tableEl.querySelectorAll('tr');
-            rows.forEach((tr, i) => {
-                if (i === 0) return; // ヘッダー行はスキップ
-                const cell = tr.querySelectorAll('td')[priceIndex];
-                if (!cell) { // セルがない場合もスキップ
-                  tr.style.display = ''; // 隠さない
-                  return;
-                }
-                const text = cell.textContent.trim();
-                const numericValue = parseFloat(text.replace(/,/g, ''));
-                const isDisplayable = numericValue > 0;
-
-                tr.style.display = (!showOnlyPriced || isDisplayable) ? '' : 'none';
-            });
-
-            moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
-        };
-
-        moneyBtn.addEventListener('click', moneyBtnClickHandler);
-        moneyBtn._eventListener = moneyBtnClickHandler;
-    } else {
-        console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
+    const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent.trim());
+    const priceIndex = headers.indexOf('金額');
+    const nameIndex = headers.indexOf('品名');
+    
+    if (priceIndex === -1) {
+      console.warn('金額列が見つかりません。');
+      return;
     }
 
-    if (saveBtn) {
-        saveBtn.style.display = 'inline-block';
-    }
+    showOnlyPriced = !showOnlyPriced;
+
+    const rows = tableEl.querySelectorAll('tr');
+    rows.forEach((tr, i) => {
+      if (i === 0) return; // ヘッダー行
+      
+      const cells = tr.querySelectorAll('td');
+      const name = cells[nameIndex]?.textContent?.trim() || '';
+      
+      // ✅ 「目標収量」は常に表示
+      if (name === '目標収量') {
+        tr.style.display = '';
+        return;
+      }
+      
+      const cell = tr.querySelectorAll('td')[priceIndex];
+      if (!cell) {
+        tr.style.display = '';
+        return;
+      }
+      
+      const text = cell.textContent.trim();
+      const numericValue = parseFloat(text.replace(/,/g, ''));
+      const isDisplayable = numericValue > 0;
+
+      tr.style.display = (!showOnlyPriced || isDisplayable) ? '' : 'none';
+    });
+
+    moneyBtn.textContent = showOnlyPriced ? '▼ 全て表示する' : '▶ 金額ありのみ表示';
   };
 
-  reader.readAsText(file, 'Shift_JIS');
+  moneyBtn.addEventListener('click', moneyBtnClickHandler);
+  moneyBtn._eventListener = moneyBtnClickHandler;
+} else {
+  console.warn("⚠️ toggleMoneyBtn が DOM に存在していません");
+}
+
+if (saveBtn) {
+  saveBtn.style.display = 'inline-block';
 }
 
 
